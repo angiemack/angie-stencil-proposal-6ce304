@@ -1,0 +1,75 @@
+{
+  "hash": "66cb44e3278dd0d09aeab764a96b90341ac7bdd5",
+  "files": [
+    "app/entry.server.tsx",
+    "workers/app.ts"
+  ],
+  "legacyPaths": [
+    "app/auth",
+    "app/payments",
+    "app/strings/index.tsx",
+    "app/env.d.ts",
+    "app/lib/ai.ts",
+    "app/lib/backend.ts",
+    "app/lib/db.ts",
+    "app/lib/email.ts",
+    "app/lib/fetch.ts",
+    "app/lib/hydration.tsx",
+    "app/lib/image.ts",
+    "app/lib/push.ts",
+    "app/lib/search.ts",
+    "app/lib/storage.ts"
+  ],
+  "changes": [
+    {
+      "hash": "9f92f6a4a8ffd789f4773852c7b17fad6e3252c3",
+      "date": "2026-07-20",
+      "notes": [
+        "v0 — all platform code consolidated into app/.stencil/, imported as ~stencil/*. The old platform locations (see legacyPaths) were removed with no compatibility shims. On the first update build after this lands, the sync replaces app/.stencil/ wholesale and deletes the legacyPaths copies; you then apply the import rewrites in `breaking` so the app resolves platform code from its new home."
+      ],
+      "breaking": [
+        "Rewrite service-SDK imports from ~/lib/* to ~stencil/*: db, storage, ai, email, push, search, fetch, backend, hydration (they now live flat at the layer root, not under a lib/ subfolder). Leave ~/lib/utils as-is — it stays app-owned.",
+        "Rewrite auth imports from ~/auth to ~stencil/auth. One exception: in app/routes.ts import the auth route pack from the relative path ./.stencil/auth, because React Router's config loader can't resolve the ~stencil alias there.",
+        "Rewrite the strings runtime import from ~/strings to ~stencil/strings. app/strings/strings.json is app-owned copy — leave it unchanged.",
+        "Repoint the two pinned re-exports (their paths are fixed by React Router / wrangler, so they can't move into .stencil/): set workers/app.ts to `export { default } from \"~stencil/worker/app\";` and app/entry.server.tsx to `export { default } from \"~stencil/worker/entry.server\";`. Do this only on v0 — i.e. when the file does not already import from ~stencil/worker — so an app that has since extended either file keeps its changes.",
+        "Add \"~stencil/*\": [\"./app/.stencil/*\"] to compilerOptions.paths in BOTH tsconfig.json and tsconfig.cloudflare.json, alongside the existing \"~/*\" entry. Without it every ~stencil/* import fails to resolve (TS2307).",
+        "Add both \"app/.stencil/**/*\" and \".react-router/types/app/.stencil/**/*\" to the include list in tsconfig.cloudflare.json. TypeScript's ** glob skips dot-directories, so the layer's own files and its generated route types are otherwise outside the project (TS6307), which also hides app/.stencil/env.d.ts and breaks the Env bindings.",
+        "Add @source \"./.stencil\"; to app/app.css after the last @import. Tailwind's automatic source detection also skips dot-directories, so without it the layer's login/signup/payments UI compiles no classes and ships unstyled.",
+        "Delete any app-owned app/env.d.ts, and drop its \"app/env.d.ts\" entry from the tsconfig.cloudflare.json include list — the file is gone, and app/.stencil/**/* covers its replacement. The platform Env type and window.stencil globals now live in app/.stencil/env.d.ts (synced every build); a leftover app/env.d.ts would declaration-merge a stale interface Env. The sync removes it for you.",
+        "If platform code now requires a service binding your wrangler.jsonc doesn't declare, add its services entry. Deploy-injected optional bindings (e.g. PAYMENTS?) need no entry — only bindings the platform hard-requires do."
+      ]
+    },
+    {
+      "hash": "337a9ea4c16e66b58e22de3d6a38e4f39344c946",
+      "date": "2026-07-28",
+      "notes": [
+        "Added the runtime image-generation SDK at the layer root: createImage(env) from ~stencil/image generates an image from a text prompt via Workers AI, proxied through the backend (no keys). Merged in from main, where it had landed at the pre-.stencil path app/lib/image.ts; re-homed to app/.stencil/image.ts so it is wholesale-synced like the other service SDKs.",
+        "Consolidated the auth transactional emails into app/.stencil/auth/auth-email.ts (reset, verification, magic link, OTP), superseding reset-email.ts, which was removed. sendAuthEmail(env, to, ...) now owns building and sending; it imports createEmail from ~stencil/email (../email) rather than the old ~/lib/email path."
+      ],
+      "breaking": [
+        "If the app imports the image SDK from ~/lib/image (only possible on an app built off main during this initiative's review), rewrite it to ~stencil/image; the sync removes the stale app/lib/image.ts for you (it is now a legacyPath). Apps already on the v0 layer never had image gen — for them this is a new capability, nothing to rewrite.",
+        "No auth-email action needed: auth emails are internal to the platform layer and wholesale-synced, so the reset-email.ts → auth-email.ts consolidation and the magic-link/OTP support arrive automatically on the next build."
+      ]
+    },
+    {
+      "hash": "e9b26070f7adb1f777d4d2a43a34401fe526587e",
+      "date": "2026-07-29",
+      "notes": [
+        "Removed the inbound pull API from the email SDK (~stencil/email): createEmail(env) no longer exposes inbox()/getMessage()/markRead()/enableInbox() and now exports only send(), address(), and getAttachment(). Incoming mail is no longer read back over the backend binding — the platform now pushes every inbound email to the app's webhook at /api/internal/email-inbound, which stores it in the app's own D1."
+      ],
+      "breaking": [
+        "If the app called any removed pull method (createEmail(env).inbox/getMessage/markRead/enableInbox), stop — they no longer exist. Read inbound mail from the app's own D1 table, populated by the /api/internal/email-inbound push webhook; see the email skill for the table and route. Apps with no inbound-email usage need no change."
+      ]
+    },
+    {
+      "hash": "66cb44e3278dd0d09aeab764a96b90341ac7bdd5",
+      "date": "2026-08-05",
+      "notes": [
+        "Dropped the relative baseURL from createAuthClient (auth/browser.client.ts); better-auth >=1.5 throws on it ('Invalid base URL: /api/auth'). Falls back to the default /api/auth fetch path."
+      ],
+      "breaking": [
+        "Nothing"
+      ]
+    }
+  ]
+}

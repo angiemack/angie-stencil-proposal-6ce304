@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Hello World",
+    "cta": "Go to app"
+  },
+  "app": {
+    "greeting": "Welcome, {{name}}",
+    "signOut": "Sign out"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "model": "claude-opus-4-8",
+  "effortLevel": "medium",
+  "permissions": {
+    "deny": [
+      "Edit(app/generated/**)",
+      "Write(app/generated/**)"
+    ]
+  }
+}

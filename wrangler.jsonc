@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "app",
+  "compatibility_date": "2025-04-04",
+  "main": "./workers/app.ts",
+  // `no_minimal_subrequests` works around a known Cloudflare bug where the
+  // default `minimal_subrequests` optimization causes same-zone worker-to-worker
+  // fetches (e.g. this app → apps.hellostencil.com for OIDC) to return an instant 522.
+  // See https://github.com/cloudflare/workerd/issues/787
+  "compatibility_flags": ["nodejs_compat", "no_minimal_subrequests"],
+  
+  // Local-dev bindings - Stencil injects real values during deployment
+  "vars": { "APP_SLUG": "local-app", "APP_ID": "local-app" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "local-app",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "local-app",
+    },
+  ],
+}
