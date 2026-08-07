@@ -1,24 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Public+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
 :root {
   /* ── shadcn base tokens ───────────────────────────────────────── */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* The letter lives on cream (#FBF6F4) with charcoal (#3B3B3B) ink. */
+  --background: #FBF6F4;
+  --foreground: #3B3B3B;
+  --card: #FFFFFF;
+  --card-foreground: #3B3B3B;
+  --popover: #FFFFFF;
+  --popover-foreground: #3B3B3B;
+  --primary: #3B3B3B;
+  --primary-foreground: #FBF6F4;
+  --secondary: #F1E9E5;
+  --secondary-foreground: #3B3B3B;
+  --muted: #F1E9E5;
+  --muted-foreground: #8A817C;
+  --accent: #F1E9E5;
+  --accent-foreground: #3B3B3B;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #3B3B3B;
+  --input: #E7DCD6;
+  --ring: #F4B69A;
   --success: oklch(0.596 0.145 145.59);
   --warning: oklch(0.769 0.154 71.29);
   --chart-1: oklch(0.809 0.105 251.813);
@@ -35,19 +38,25 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
+  /* ── letter accents (the page's only colour) ──────────────────── */
+  --letter-cream: #FBF6F4;
+  --letter-ink: #3B3B3B;
+  --letter-rose: #F4B69A;
+  --letter-sage: #B9C8B1;
+
   /* ── surface hierarchy ────────────────────────────────────────── */
-  --background-secondary: oklch(0.97 0 0);
+  --background-secondary: #F5EDE9;
   --surface-hover:   color-mix(in srgb, var(--foreground) 6%,  var(--background));
   --surface-active:  color-mix(in srgb, var(--foreground) 10%, var(--background));
-  --surface-elevated: oklch(1 0 0);
+  --surface-elevated: #FFFFFF;
 
   /* ── border hierarchy ─────────────────────────────────────────── */
-  --border-subtle: oklch(0.96 0 0);
-  --border-muted: oklch(0.94 0 0);
-  --border-strong: oklch(0.82 0 0);
+  --border-subtle: color-mix(in srgb, var(--letter-ink) 10%, transparent);
+  --border-muted: color-mix(in srgb, var(--letter-ink) 16%, transparent);
+  --border-strong: var(--letter-ink);
 
   /* ── text hierarchy ───────────────────────────────────────────── */
-  --foreground-secondary: oklch(0.4 0 0);
+  --foreground-secondary: #6F6862;
 
   /* ── primary depth (hover/tint states for brand colour) ─────── */
   --primary-hover: color-mix(in srgb, var(--primary) 90%, var(--foreground));
@@ -56,33 +65,33 @@
   --primary-tint:  color-mix(in srgb, var(--primary) 6%,  var(--background));
 
   /* ── focus ring (alpha-blended, for soft ring style) ────────── */
-  --focus-ring: oklch(0.708 0 0 / 0.4);
+  --focus-ring: color-mix(in srgb, var(--letter-rose) 55%, transparent);
 
   /* ── error (form validation — distinct from destructive) ─────── */
   --error: oklch(0.577 0.245 27.325);
   --error-foreground: oklch(0.985 0 0);
 
-  /* ── radius ───────────────────────────────────────────────────── */
-  --radius: 0.25rem;
+  /* ── radius — the letter is sharp-cornered everywhere ─────────── */
+  --radius: 0rem;
   --radius-none: 0rem;
-  --radius-sm: 0.125rem;
-  --radius-lg: 0.375rem;
-  --radius-xl: 0.5rem;
+  --radius-sm: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
   --radius-full: 9999px;
 
   /* ── typography ───────────────────────────────────────────────── */
-  --font-display: Inter Display, Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, monospace;
-  --font-weight-display: 600;
-  --line-height-display: 1.1;
-  --tracking-display: -0.02em;
-  --font-weight-body: 400;
-  --line-height-body: 1.5;
+  --font-weight-display: 300;
+  --line-height-display: 1.08;
+  --tracking-display: -0.01em;
+  --font-weight-body: 300;
+  --line-height-body: 1.75;
   --tracking-body: 0em;
   --font-weight-mono: 400;
 
-  /* ── shadows ──────────────────────────────────────────────────── */
+  /* ── shadows — none on the letter ─────────────────────────────── */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
@@ -99,62 +108,62 @@
   --spacing-base: 0.25rem;
 }
 
+/* The letter is cream in every colour scheme — mirror the palette so a
+   dark browser preference can never flip it. */
 .dark {
-  /* ── shadcn base tokens ───────────────────────────────────────── */
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --success: oklch(0.696 0.145 145.59);
-  --warning: oklch(0.849 0.154 71.29);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #FBF6F4;
+  --foreground: #3B3B3B;
+  --card: #FFFFFF;
+  --card-foreground: #3B3B3B;
+  --popover: #FFFFFF;
+  --popover-foreground: #3B3B3B;
+  --primary: #3B3B3B;
+  --primary-foreground: #FBF6F4;
+  --secondary: #F1E9E5;
+  --secondary-foreground: #3B3B3B;
+  --muted: #F1E9E5;
+  --muted-foreground: #8A817C;
+  --accent: #F1E9E5;
+  --accent-foreground: #3B3B3B;
+  --border: #3B3B3B;
+  --input: #E7DCD6;
+  --ring: #F4B69A;
 
-  /* ── surface hierarchy ────────────────────────────────────────── */
-  --background-secondary: oklch(0.18 0 0);
-  --surface-elevated: oklch(0.26 0 0);
+  --background-secondary: #F5EDE9;
+  --surface-elevated: #FFFFFF;
+  --border-subtle: color-mix(in srgb, var(--letter-ink) 10%, transparent);
+  --border-muted: color-mix(in srgb, var(--letter-ink) 16%, transparent);
+  --border-strong: var(--letter-ink);
+  --foreground-secondary: #6F6862;
+  --focus-ring: color-mix(in srgb, var(--letter-rose) 55%, transparent);
+}
 
-  /* ── border hierarchy ─────────────────────────────────────────── */
-  --border-subtle: oklch(1 0 0 / 6%);
-  --border-muted: oklch(1 0 0 / 8%);
-  --border-strong: oklch(1 0 0 / 20%);
+/* ── Scroll reveal ────────────────────────────────────────────────
+   Each beat fades and rises as it enters the viewport. SSR-safe: the
+   class name is identical on server and client; visibility is toggled
+   after mount by an IntersectionObserver, never during render. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 800ms var(--ease-decelerate),
+    transform 800ms var(--ease-decelerate);
+  will-change: opacity, transform;
+}
+.reveal[data-in="true"] {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
 
-  /* ── text hierarchy ───────────────────────────────────────────── */
-  --foreground-secondary: oklch(0.72 0 0);
-
-  /* ── primary depth ────────────────────────────────────────────── */
-  --primary-tint: color-mix(in srgb, var(--primary) 8%, var(--background));
-
-  /* ── focus ring ───────────────────────────────────────────────── */
-  --focus-ring: oklch(0.556 0 0 / 0.5);
-
-  /* ── error ────────────────────────────────────────────────────── */
-  --error: oklch(0.704 0.191 22.216);
-  --error-foreground: oklch(0.985 0 0);
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

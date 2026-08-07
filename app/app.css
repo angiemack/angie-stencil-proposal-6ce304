@@ -60,6 +60,12 @@
   /* ── text hierarchy ───────────────────────────────────────────── */
   --color-foreground-secondary: var(--foreground-secondary);
 
+  /* ── letter accents ───────────────────────────────────────────── */
+  --color-cream: var(--letter-cream);
+  --color-ink: var(--letter-ink);
+  --color-rose: var(--letter-rose);
+  --color-sage: var(--letter-sage);
+
   /* ── primary depth ────────────────────────────────────────────── */
   --color-primary-hover: var(--primary-hover);
   --color-primary-muted: var(--primary-muted);

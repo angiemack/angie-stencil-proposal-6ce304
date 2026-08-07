@@ -1,10 +1,69 @@
 {
-  "home": {
-    "title": "Hello World",
-    "cta": "Go to app"
-  },
-  "app": {
-    "greeting": "Welcome, {{name}}",
-    "signOut": "Sign out"
+  "letter": {
+    "kicker": "A WORKING IDEA · AUGUST 2026",
+    "headline": {
+      "line1": "The Gap Stencil",
+      "line2": "Can Own"
+    },
+    "salutation": "Martha,",
+    "intro": {
+      "p1": "There's a whole group of business owners who have incredible ideas but still don't see themselves as people who can build software. That's the group I keep thinking about.",
+      "p2": "The opportunity I see for Stencil isn't simply helping people build software. It's helping people realize they're capable of building software in the first place."
+    },
+    "pullquote": "The companies that win this category won't be the ones with the best AI. They'll be the ones who make normal people feel capable.",
+    "transition1": "I keep coming back to one moment from our call.",
+    "moment": {
+      "p1": "By the end of it, Dan and Haggai were already mapping out the connector. Moments like that remind me how valuable the everyday builder's perspective can be while a product is still being shaped.",
+      "p2": "I've spent months turning how I build into a teachable process. When I taught it recently, 17 women went from learning it to building calculators, dashboards, and working tools that same day. And through my products, workshops, and community, I've already introduced around 150 entrepreneurs to the platform I currently use."
+    },
+    "evidence": {
+      "a": {
+        "number": "17",
+        "label": "builders",
+        "caption": "built working tools in one 90-minute session"
+      },
+      "b": {
+        "number": "150+",
+        "label": "entrepreneurs",
+        "caption": "followed me onto a platform"
+      },
+      "c": {
+        "number": "1",
+        "label": "conversation",
+        "caption": "changed what was built next"
+      }
+    },
+    "transition2": "So here's what I keep imagining.",
+    "ninetyDays": "Ninety days of helping shape Stencil into a platform that feels just as intuitive for the everyday entrepreneur as it does for someone who already thinks of themselves as a builder.",
+    "list": {
+      "n1": "01",
+      "i1": "A standing working session — weekly time with you and the team while the product is still becoming itself.",
+      "n2": "02",
+      "i2": "Ongoing platform testing — against the bar a non-technical creative actually needs: the Claude connection, HTML import, the first-five-minutes experience.",
+      "n3": "03",
+      "i3": "Reference builds — stress-testing key workflows beyond CRMs: calculators, dashboards, directories, portals.",
+      "n4": "04",
+      "i4": "Beginner experience recommendations — where new builders will get stuck, in what order, and what closes each gap."
+    },
+    "aside": "This isn't community management or support. It's focused product feedback from the perspective of the non-technical entrepreneur, with recommendations your team can turn into a stronger beginner experience.",
+    "transition3": "And then, the fun part.",
+    "future": {
+      "p1": "If, at the end of these 90 days, Stencil is a platform I feel confident teaching and recommending, I'd love to explore a second phase focused on education, workshops, curriculum, and bringing more service-based entrepreneurs into the platform.",
+      "p2": "I'm preparing to teach this much more publicly beginning next month, and I'm thinking carefully about the platform experience I want to put in front of that audience. It's part of why the timing of our conversations feels so right."
+    },
+    "offer": {
+      "label": "ONE SIMPLE WAY TO START",
+      "heading": "Product & Adoption Advisor",
+      "subhead": "A three-month strategic engagement",
+      "line1": "Weekly working sessions with you and the team.",
+      "line2": "Hands-on testing as new features roll out.",
+      "line3": "Reference builds that stress-test real entrepreneur use cases.",
+      "line4": "Clear recommendations for making Stencil more intuitive and teachable.",
+      "price": "$6,000/month · 3 months",
+      "closer": "If this feels like the right direction, I'd love to talk through what working together could look like."
+    },
+    "closing": "Whether this turns into something formal or not, I'm so excited about what you're building. I just couldn't shake the feeling that I have something real to contribute.",
+    "signature": "XO, Angie",
+    "link": "Let's talk about it →"
   }
 }
