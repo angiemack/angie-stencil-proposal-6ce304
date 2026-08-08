@@ -11,7 +11,11 @@ const html = `<!DOCTYPE html>
   <meta name="description" content=" ">
   <meta property="og:title" content=" ">
   <meta property="og:description" content=" ">
-  <meta property="og:image" content="">
+  <meta property="og:image" content="/assets/og-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="twitter:image" content="/assets/og-preview.png">
+  <meta property="twitter:card" content="summary_large_image">
   <title>A Note For Martha | Angie McPherson</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
