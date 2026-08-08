@@ -46,6 +46,7 @@ const html = `<!DOCTYPE html>
       .headline { font-size: 42px !important; }
       .offer-card { padding: 40px 28px !important; }
       .evidence-row { flex-direction: column !important; }
+      .price-line { font-size: 28px !important; }
     }
   </style>
 </head>
@@ -76,7 +77,7 @@ const html = `<!DOCTYPE html>
     <p class="body-p" style="margin-bottom:16px;">Test new features through the lens of the entrepreneurs I teach.</p>
     <p class="body-p" style="margin-bottom:16px;">Bring what I'm seeing firsthand from teaching entrepreneurs into product conversations.</p>
     <p class="body-p" style="margin-bottom:48px;">Ongoing working sessions with you and the team throughout the engagement.</p>
-    <p style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;margin:0;">$5,000/month · 3 months</p>
+    <p class="price-line" style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;margin:0;white-space:nowrap;">$5,000/month · 3 months</p>
   </div>
 
   <!-- Closing paragraphs -->
