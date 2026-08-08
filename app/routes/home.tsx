@@ -8,9 +8,6 @@ const html = `<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="description" content=" ">
-  <meta property="og:title" content=" ">
-  <meta property="og:description" content=" ">
   <meta property="og:image" content="/assets/og-preview.png">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1024">
