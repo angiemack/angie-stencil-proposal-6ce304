@@ -46,7 +46,7 @@ const html = `<!DOCTYPE html>
       .headline { font-size: 42px !important; }
       .offer-card { padding: 40px 28px !important; }
       .evidence-row { flex-direction: column !important; }
-      .price-line { font-size: 28px !important; }
+      .price-line { font-size: 26px !important; }
     }
   </style>
 </head>
