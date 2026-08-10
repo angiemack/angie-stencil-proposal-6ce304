@@ -16,7 +16,7 @@ const html = `<!DOCTYPE html>
   <meta name="twitter:card" content="summary">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" href="/am-favicon.png" />
-  <link rel="apple-touch-icon" href="/am-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/am-favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Public+Sans:wght@300;400&display=swap" rel="stylesheet">
