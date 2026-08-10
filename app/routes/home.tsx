@@ -7,14 +7,14 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A Note for Martha | Angie McPherson</title>
+  <meta name="description" content="From Angie McPherson · August 2026">
+  <meta property="og:title" content="A Note for Martha | Angie McPherson">
+  <meta property="og:description" content="From Angie McPherson · August 2026">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://formartha.apps.hellostencil.com">
+  <meta name="twitter:card" content="summary">
   <meta name="robots" content="noindex, nofollow">
-  <meta property="og:image" content="/blank.png" />
-  <meta property="og:image:width" content="1" />
-  <meta property="og:image:height" content="1" />
-  <meta property="og:image:type" content="image/png" />
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:image" content="/blank.png" />
-  <title>A Note For Martha | Angie McPherson</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Public+Sans:wght@300;400&display=swap" rel="stylesheet">
