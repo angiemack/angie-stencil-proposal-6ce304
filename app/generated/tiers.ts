@@ -3,5 +3,8 @@ export const tiers = {} as const;
 
 export type TierId = typeof tiers[keyof typeof tiers]["id"];
 
+// Plan ids low→high — the gating hierarchy.
+export const tierOrder = [] as readonly string[];
+
 // Convenience: the single active tier (null if no tier configured)
 export const tier = Object.values(tiers)[0] ?? null;

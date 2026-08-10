@@ -7,8 +7,11 @@ async function authHandler({
   request,
   context,
 }: Route.LoaderArgs | Route.ActionArgs) {
-  const auth = createAuth(context.cloudflare.env)
-  
+  // The dispatcher sets this header from the app's `allowSignup` setting; when
+  // off, unknown addresses can't self-register through the passwordless methods.
+  const disableSignup = request.headers.get("x-stencil-signup") === "off";
+  const auth = createAuth(context.cloudflare.env, disableSignup)
+
   const bypassResponse = await handleBypass(request, auth, context.cloudflare.env);
   if (bypassResponse) return bypassResponse;
 

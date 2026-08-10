@@ -95,8 +95,10 @@ function safeOrigin(url: string): string | null {
 const authFetch = (env: Env): typeof fetch =>
   env.AUTH ? (...args) => env.AUTH!.fetch(...args) : fetch;
 
-/** Create a Better Auth instance backed by the workspace D1 database. */
-export function createAuth(env: Env) {
+/** Create a Better Auth instance backed by the workspace D1 database.
+ *  `disableSignup` makes the passwordless methods reject unknown addresses; the
+ *  dispatcher sets it per request from the app's `allowSignup` setting. */
+export function createAuth(env: Env, disableSignup = false) {
   const issuer = authConfig.issuerUrl(env);
   const doFetch = authFetch(env);
 
@@ -142,6 +144,10 @@ export function createAuth(env: Env) {
         config: [
           {
             providerId: "stencil",
+            // Sign-in and sign-up share this endpoint and the identity is unknown
+            // until the callback, so registration is gated per request: the
+            // dispatcher forces `requestSignUp` from `allowSignup`.
+            disableImplicitSignUp: true,
             clientId: authConfig.clientId(env),
             authorizationUrl: `${issuer}/oauth/authorize`,
             tokenUrl: `${issuer}/oauth/token`,
@@ -209,6 +215,7 @@ export function createAuth(env: Env) {
         ],
       }),
       magicLink({
+        disableSignUp: disableSignup,
         sendMagicLink: async ({ email, url }) => {
           await sendAuthEmail(env, email, {
             origin: safeOrigin(url),
@@ -222,6 +229,7 @@ export function createAuth(env: Env) {
         },
       }),
       emailOTP({
+        disableSignUp: disableSignup,
         sendVerificationOTP: async ({ email, otp }, ctx) => {
           await sendAuthEmail(env, email, {
             origin: ctx?.request ? safeOrigin(ctx.request.url) : null,

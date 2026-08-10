@@ -1,5 +1,5 @@
 {
-  "hash": "66cb44e3278dd0d09aeab764a96b90341ac7bdd5",
+  "hash": "e77be4b5ff947b71c0ed933a3c3fa3e6ed8ef3ae",
   "files": [
     "app/entry.server.tsx",
     "workers/app.ts"
@@ -69,6 +69,27 @@
       ],
       "breaking": [
         "Nothing"
+      ]
+    },
+    {
+      "hash": "508dc50d591cfb1f489a90a49bce713d715ac4f7",
+      "date": "2026-08-06",
+      "notes": [
+        "Auth signup gate now covers social, magic-link and email-otp, so allowSignup:false actually stops new-account creation. The stencil genericOAuth provider sets disableImplicitSignUp:true; createAuth(env, disableSignup) threads disableSignUp into the magicLink and emailOTP plugins; the app auth handler reads the dispatcher's x-stencil-signup header. Returning users keep signing in with every enabled method."
+      ],
+      "breaking": [
+        "Nothing — the auth layer is wholesale-synced, so the signup gate arrives automatically on the next build. Requires the matching dispatcher change (forces requestSignUp / x-stencil-signup from AUTH_CONFIG.allowSignup)."
+      ]
+    },
+    {
+      "hash": "e77be4b5ff947b71c0ed933a3c3fa3e6ed8ef3ae",
+      "date": "2026-08-06",
+      "notes": [
+        "payments/server.ts checkout() takes an optional interval ('month' | 'year', default 'month'), forwarded to the subscription checkout so a plan's annual price can be billed when the app has annual billing on.",
+        "payments/server.ts requireSubscription() now gates by plan-or-higher: a passed tierId unlocks that plan and any higher one per the plan order in ~/generated/tiers (tierOrder). Pass { exact: true } for the previous exact-plan match; omitting tierId still accepts any active subscription."
+      ],
+      "breaking": [
+        "Nothing — tierOrder is regenerated into ~/generated/tiers on the same build that syncs this layer, and a single-plan app's gating is unchanged (the plan only satisfies itself)."
       ]
     }
   ]

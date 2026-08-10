@@ -2,8 +2,21 @@ import { redirect } from "react-router";
 import { requireAuth } from "~stencil/auth/server";
 import { createDb } from "~stencil/db";
 import { subscription } from "~stencil/auth/schema";
+import { tierOrder } from "~/generated/tiers";
 import { eq } from "drizzle-orm";
 import type { AppLoadContext } from "react-router";
+
+// A higher plan unlocks lower ones: `tierOrder` ranks plans low→high, so a member
+// qualifies at or above the gated plan. `exact`, or a plan absent from the order
+// (e.g. archived), falls back to an exact id match.
+function planSatisfies(subTierId: string, requiredTierId: string, exact?: boolean): boolean {
+  if (subTierId === requiredTierId) return true;
+  if (exact) return false;
+  const have = tierOrder.indexOf(subTierId);
+  const need = tierOrder.indexOf(requiredTierId);
+  if (have === -1 || need === -1) return false;
+  return have >= need;
+}
 
 /**
  * Subscription transport — how *this app* charges *its own* users. Every call
@@ -89,16 +102,17 @@ async function fetchPaymentsEnabled(env: Env): Promise<boolean> {
  * Returns `{ user, sub }` on success. `sub` is null when payments are disabled
  * for the app (gating bypassed) — always treat it as nullable.
  *
- * If tierId is omitted, any active subscription qualifies (recommended for
- * single-tier apps — use `tier` from `~/generated/tiers` when you do pass it).
+ * If tierId is omitted, any active subscription qualifies. When you pass one, a
+ * higher plan also qualifies ("this plan or higher") per the plan order in
+ * `~/generated/tiers`; pass `{ exact: true }` to require that exact plan.
  *
  * Use in loaders for gated routes:
  *
  *   import { requireSubscription } from "~stencil/payments/server";
- *   import { tier } from "~/generated/tiers";
+ *   import { tiers } from "~/generated/tiers";
  *
  *   export async function loader({ request, context }: Route.LoaderArgs) {
- *     const { user } = await requireSubscription(request, context, tier!.id);
+ *     const { user } = await requireSubscription(request, context, tiers.pro.id);
  *     return { user };
  *   }
  */
@@ -106,6 +120,7 @@ export async function requireSubscription(
   request: Request,
   context: AppLoadContext,
   tierId?: string,
+  opts?: { exact?: boolean },
 ): Promise<{
   user: Awaited<ReturnType<typeof requireAuth>>["user"];
   sub: typeof subscription.$inferSelect | null;
@@ -123,7 +138,7 @@ export async function requireSubscription(
 
   const isActive =
     sub &&
-    (tierId ? sub.tierId === tierId : true) &&
+    (tierId ? planSatisfies(sub.tierId, tierId, opts?.exact) : true) &&
     (sub.status === "active" || sub.status === "trialing") &&
     sub.currentPeriodEnd !== null &&
     sub.currentPeriodEnd > new Date();
@@ -178,7 +193,7 @@ export async function getSubscription(
 export async function checkout(
   request: Request,
   context: AppLoadContext,
-  opts: { tierId: string; successUrl?: string; cancelUrl?: string },
+  opts: { tierId: string; interval?: "month" | "year"; successUrl?: string; cancelUrl?: string },
 ): Promise<void> {
   const env = context.cloudflare.env;
   const { user } = await requireAuth(request, env);
@@ -190,6 +205,7 @@ export async function checkout(
     `/v1/apps/${appId}/subscriptions/checkout`,
     {
       tierId: opts.tierId,
+      interval: opts.interval ?? "month",
       endUserId: user.id,
       successUrl: opts.successUrl ?? `${base}/app`,
       cancelUrl: opts.cancelUrl ?? `${base}/upgrade`,
