@@ -130,7 +130,14 @@ const html = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export function loader() {
+import type { Route } from "./+types/home";
+import { requireAuth } from "~stencil/auth/server";
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+  // Gate the letter behind auth — unauthenticated visitors are redirected
+  // to /login before any content is served.
+  await requireAuth(request, context.cloudflare.env);
+
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
