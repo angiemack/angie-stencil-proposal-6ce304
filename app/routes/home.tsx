@@ -19,8 +19,22 @@ const html = `<!DOCTYPE html>
   <link rel="apple-touch-icon" sizes="180x180" href="/am-favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Public+Sans:wght@300;400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'EditorsNote';
+      src: url('/assets/fonts/EditorsNote-Regular.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'EditorsNote';
+      src: url('/assets/fonts/EditorsNote-Italic.woff') format('woff');
+      font-weight: normal;
+      font-style: italic;
+      font-display: swap;
+    }
     *, *::before, *::after { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -61,7 +75,7 @@ const html = `<!DOCTYPE html>
   <p style="font-family:'Public Sans',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;opacity:0.55;margin:0 0 48px 0;">AUGUST 2026</p>
 
   <!-- Salutation -->
-  <p style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:300;line-height:1.1;margin:0 0 56px 0;">Martha,</p>
+  <p style="font-family:'EditorsNote',serif;font-size:52px;font-weight:300;line-height:1.1;margin:0 0 56px 0;">Martha,</p>
 
   <!-- Body paragraphs -->
   <p class="body-p">I really enjoyed our conversations about Stencil last week. I had an idea afterward that I wanted to share with you.</p>
@@ -75,13 +89,13 @@ const html = `<!DOCTYPE html>
   <!-- Offer card -->
   <div class="offer-card" style="background:#FFFFFF;border:1px solid #3B3B3B;border-radius:0;padding:56px 64px 64px 64px;margin:48px 0 56px 0;">
     <p style="font-family:'Public Sans',sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;opacity:0.55;margin:0 0 20px 0;">ONE SIMPLE WAY TO START</p>
-    <h2 style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;margin:0 0 10px 0;">Strategic Advisor</h2>
-    <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:18px;font-weight:300;margin:0 0 36px 0;">A three-month engagement</p>
+    <h2 style="font-family:'EditorsNote',serif;font-size:36px;font-weight:300;margin:0 0 10px 0;">Strategic Advisor</h2>
+    <p style="font-family:'EditorsNote',serif;font-style:italic;font-size:18px;font-weight:300;margin:0 0 36px 0;">A three-month engagement</p>
     <p class="body-p" style="margin-bottom:16px;">Build real tools in Stencil to see what works, where people get stuck, and what could be even better.</p>
     <p class="body-p" style="margin-bottom:16px;">Test new features through the lens of the entrepreneurs I teach.</p>
     <p class="body-p" style="margin-bottom:16px;">Bring what I'm seeing firsthand from teaching entrepreneurs into product conversations.</p>
     <p class="body-p" style="margin-bottom:48px;">Ongoing working sessions with you and the team throughout the engagement.</p>
-    <p class="price-line" style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;margin:0;white-space:nowrap;">$5,000/month · 3 months</p>
+    <p class="price-line" style="font-family:'EditorsNote',serif;font-size:40px;font-weight:300;margin:0;white-space:nowrap;">$5,000/month · 3 months</p>
   </div>
 
   <!-- Closing paragraphs -->
@@ -90,7 +104,7 @@ const html = `<!DOCTYPE html>
   <p class="body-p">If this feels like the right direction, I'd love to continue the conversation.</p>
 
   <!-- Signature -->
-  <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:36px;font-weight:300;margin:48px 0 40px 0;">XO, Angie</p>
+  <p style="font-family:'EditorsNote',serif;font-style:italic;font-size:36px;font-weight:300;margin:48px 0 40px 0;">XO, Angie</p>
 
   <!-- Mailto link -->
   <a href="mailto:angie@mcphersonphotos.com" style="font-family:'Public Sans',sans-serif;font-size:15px;font-weight:300;color:#3B3B3B;text-decoration:none;border-bottom:1px solid #F4B69A;padding-bottom:2px;display:inline-block;">Let's talk about it →</a>

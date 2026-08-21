@@ -205,7 +205,9 @@ export async function checkout(
     `/v1/apps/${appId}/subscriptions/checkout`,
     {
       tierId: opts.tierId,
-      interval: opts.interval ?? "month",
+      // Omit interval when the caller didn't set one, so the worker bills the
+      // interval the plan actually offers (a yearly-only plan has no monthly price).
+      ...(opts.interval ? { interval: opts.interval } : {}),
       endUserId: user.id,
       successUrl: opts.successUrl ?? `${base}/app`,
       cancelUrl: opts.cancelUrl ?? `${base}/upgrade`,

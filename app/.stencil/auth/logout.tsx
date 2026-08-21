@@ -8,7 +8,7 @@ import type { Route } from "./+types/logout";
  * sign-out endpoint and forwards the resulting Set-Cookie headers through.
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const auth = createAuth(context.cloudflare.env);
+  const auth = createAuth(context.cloudflare.env, false, undefined, request);
 
   const signOutReq = new Request(new URL("/api/auth/sign-out", request.url), {
     method: "POST",

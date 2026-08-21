@@ -90,10 +90,18 @@ export type Purchase = {
  *
  * Gated on an active subscription: only a paying subscriber of this app may
  * become a seller, so this throws a redirect to `/upgrade` if the user isn't
- * subscribed. Call from a form action:
+ * subscribed.
+ *
+ * The first time a seller onboards you MUST pass their `country` (ISO 3166-1
+ * alpha-2, e.g. "GB") — collect it in your own UI, because a Stripe account's
+ * country is fixed at creation and can never change afterwards. An unsupported
+ * country throws an error; surface it and let them pick another. `country` is
+ * ignored once the account exists (resuming/fixing onboarding). Call from a
+ * form action:
  *
  *   export async function action({ request, context }: Route.ActionArgs) {
- *     await onboardSeller(request, context);
+ *     const form = await request.formData();
+ *     await onboardSeller(request, context, { country: String(form.get("country")) });
  *   }
  *
  * After Stripe, the seller returns to `returnUrl` (defaults to `/app/sell`) —
@@ -102,7 +110,7 @@ export type Purchase = {
 export async function onboardSeller(
   request: Request,
   context: AppLoadContext,
-  opts?: { returnUrl?: string; refreshUrl?: string },
+  opts?: { country?: string; returnUrl?: string; refreshUrl?: string },
 ): Promise<never> {
   const env = context.cloudflare.env;
   const { user } = await requireSubscription(request, context);
@@ -117,6 +125,7 @@ export async function onboardSeller(
       body: JSON.stringify({
         email: user.email,
         displayName: user.name,
+        country: opts?.country,
         returnUrl: opts?.returnUrl ?? `${base}/app/sell`,
         refreshUrl: opts?.refreshUrl ?? `${base}/app/sell`,
       }),
@@ -348,6 +357,45 @@ export async function getPurchases(
   if (!res.ok) return [];
   const { purchases } = await res.json<{ purchases: Purchase[] }>();
   return purchases ?? [];
+}
+
+/**
+ * Remove the current user's seller account entirely — closes their Stripe
+ * account so they can start over (for example after onboarding in the wrong
+ * country, which Stripe can't change). Re-onboarding afterwards mints a
+ * brand-new Stripe account. Returns `{ removed: false, reason }` without
+ * deleting anything if the seller has already taken payments — surface `reason`
+ * to them rather than treating it as an error.
+ *
+ *   export async function action({ request, context }: Route.ActionArgs) {
+ *     return await disconnectSeller(request, context); // render reason when removed === false
+ *   }
+ */
+export async function disconnectSeller(
+  request: Request,
+  context: AppLoadContext,
+): Promise<{ removed: boolean; reason?: string }> {
+  const env = context.cloudflare.env;
+  const { user } = await requireAuth(request, env);
+  const appId = await resolveAppId(env);
+
+  const res = await paymentsFetch(
+    env,
+    `/v1/apps/${appId}/sellers/${encodeURIComponent(user.id)}`,
+    { method: "DELETE" },
+  );
+  if (res.ok) return { removed: true };
+
+  const data = await res
+    .json<{ error?: string; code?: string }>()
+    .catch(() => ({}) as { error?: string; code?: string });
+  if (res.status === 409 && data.code === "has_transactions") {
+    return {
+      removed: false,
+      reason: data.error ?? "You have already taken payments, so this account can't be removed.",
+    };
+  }
+  throw new Error(data.error ?? "Could not remove the seller account");
 }
 
 /**

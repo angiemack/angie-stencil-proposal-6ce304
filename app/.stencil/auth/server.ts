@@ -7,7 +7,7 @@ import { createAuth } from "./utils";
  * Use this in the root loader to make session data available to useOptionalAuthUser().
  */
 export async function getSession(request: Request, env: Env) {
-  const auth = createAuth(env);
+  const auth = createAuth(env, false, undefined, request);
   return await auth.api.getSession({ headers: request.headers });
 }
 

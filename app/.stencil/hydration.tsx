@@ -57,3 +57,41 @@ export function ClientOnly({
 }): ReactNode {
   return useHydrated() ? children() : fallback;
 }
+
+/**
+ * `hydrateRoot`'s `onRecoverableError` handler — wired up in `app/entry.client.tsx`.
+ *
+ * React recovers from a hydration mismatch by re-rendering the affected subtree
+ * on the client, so the app keeps working, but its default handler rethrows and
+ * the error surfaces as a bare "Minified React error #418" that names nothing.
+ * Supplying this stops the rethrow and forwards the message, stack and
+ * `componentStack` — which survives minification and pinpoints the component —
+ * to the injector and the published-app error beacon.
+ *
+ * Reporting is all it does today; any further recoverable-error handling belongs
+ * here rather than in the app-owned entry, which is why it's named for the hook
+ * it implements and not for what it currently happens to do.
+ */
+export function handleRecoverableError(
+  error: unknown,
+  errorInfo?: { componentStack?: string | null },
+): void {
+  if (typeof window === "undefined") return;
+  const err = error instanceof Error ? error : null;
+  try {
+    window.postMessage(
+      {
+        source: "stencil-app",
+        type: "recoverable-error",
+        error: {
+          message: err?.message ?? String(error),
+          stack: err?.stack ?? "",
+          componentStack: errorInfo?.componentStack?.trim() ?? "",
+        },
+      },
+      "*",
+    );
+  } catch {
+    // best-effort — reporting must never break a render React already recovered
+  }
+}

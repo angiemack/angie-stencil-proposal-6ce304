@@ -31,11 +31,31 @@ export function createStorage(env: Env): R2Bucket {
             return value.call(target, all);
           };
         case "list":
-          return (options?: R2ListOptions) =>
-            value.call(target, {
+          // Strip the app prefix back off returned keys so list is symmetric
+          // with put/get/head/delete — otherwise a key read from list() and
+          // passed back to get() double-prefixes and 404s (the object is lost).
+          return async (options?: R2ListOptions): Promise<R2Objects> => {
+            const listed: R2Objects = await value.call(target, {
               ...options,
               prefix: `${prefix}${options?.prefix ?? ""}`,
             });
+            const strip = (key: string) =>
+              key.startsWith(prefix) ? key.slice(prefix.length) : key;
+            return {
+              ...listed,
+              objects: listed.objects.map(
+                (obj) =>
+                  new Proxy(obj, {
+                    get(t, p, r) {
+                      if (p === "key") return strip(t.key);
+                      const v = Reflect.get(t, p, r);
+                      return typeof v === "function" ? v.bind(t) : v;
+                    },
+                  }),
+              ),
+              delimitedPrefixes: listed.delimitedPrefixes.map(strip),
+            };
+          };
         default:
           return value.bind(target);
       }

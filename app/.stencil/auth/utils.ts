@@ -43,6 +43,9 @@ import { emailOTP } from "better-auth/plugins/email-otp";
 import { drizzle } from "drizzle-orm/d1";
 import * as authSchema from "./schema";
 import { sendAuthEmail } from "./auth-email";
+import { withConsumerHooks } from "./hooks";
+import { handleCompleteRegistration } from "./meta-capi";
+import { handleSignupFanout } from "./signup-fanout";
 
 /** Helper to check if we're in dev mode. */
 function isDev() {
@@ -97,8 +100,15 @@ const authFetch = (env: Env): typeof fetch =>
 
 /** Create a Better Auth instance backed by the workspace D1 database.
  *  `disableSignup` makes the passwordless methods reject unknown addresses; the
- *  dispatcher sets it per request from the app's `allowSignup` setting. */
-export function createAuth(env: Env, disableSignup = false) {
+ *  dispatcher sets it per request from the app's `allowSignup` setting. `ctx` is
+ *  the request's ExecutionContext, so platform hooks can run past the response.
+ *  `request` supplies the base URL from its own origin (see `baseURL` below). */
+export function createAuth(
+  env: Env,
+  disableSignup = false,
+  ctx?: ExecutionContext,
+  request?: Request,
+) {
   const issuer = authConfig.issuerUrl(env);
   const doFetch = authFetch(env);
 
@@ -108,12 +118,25 @@ export function createAuth(env: Env, disableSignup = false) {
       schema: authSchema,
     }),
     secret: authConfig.betterAuthSecret(env),
-    baseURL: authConfig.baseURL(),
+    // Base URL comes from the request's own origin: one app serves several origins
+    // (custom domain, apps./previews.hellostencil.com) so a fixed URL would break
+    // redirects for the others. The dispatcher only routes the app's own hostnames.
+    baseURL: request ? new URL(request.url).origin : authConfig.baseURL(),
     trustedOrigins: authConfig.trustedOrigins(),
     basePath: "/api/auth",
     advanced: {
       defaultCookieAttributes: { sameSite: "none", secure: true },
     },
+    databaseHooks: withConsumerHooks(env, {
+      user: {
+        create: {
+          after: async (user, hookCtx) => {
+            handleCompleteRegistration(env, ctx, user, hookCtx);
+            handleSignupFanout(env, ctx, user);
+          },
+        },
+      },
+    }),
     emailAndPassword: {
       enabled: true,
       sendResetPassword: async ({ user, url }) => {

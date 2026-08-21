@@ -213,6 +213,12 @@ Each Stencil app has **at most one active tier** — the database enforces this.
 
 ---
 
+## 8. Payment receipts are automatic — do not send your own
+
+The platform sends the payment receipt email itself, on Stripe's settled-payment webhook: a new receipt on every subscription charge (signup and each renewal) and one on every one-time sale. It goes to the payer, from the app's own email domain when the builder has connected one (otherwise the shared sender), and links Stripe's own receipt. **No wiring is required and app code must not send its own receipt** — adding one via the `email` skill (`~stencil/email`) just double-sends. Only add a *different* transactional email (e.g. an order-shipped notice) through that skill.
+
+---
+
 ## Rules
 
 - **Never build custom Stripe integration.** No `stripe.js`, no `loadStripe()`, no `STRIPE_SECRET_KEY`.
@@ -222,3 +228,4 @@ Each Stencil app has **at most one active tier** — the database enforces this.
 - **`checkout()` and `manageSubscription()` must be called from server actions**, not loaders or client code. Both throw a redirect.
 - **`tier` can be null.** Always null-check before using (`tier?.id`, `tier!.id` only after confirming it exists).
 - The upgrade page lives at `/upgrade` — this is the default redirect target for ungated users. Don't change this path.
+- **Never send your own payment receipt.** The platform sends it automatically on payment (see §8); a receipt built with the `email` skill only double-sends.

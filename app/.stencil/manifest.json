@@ -1,7 +1,8 @@
 {
-  "hash": "e77be4b5ff947b71c0ed933a3c3fa3e6ed8ef3ae",
+  "hash": "b78853f6f047c2048a21e5e5fdf630f394c0da4a",
   "files": [
     "app/entry.server.tsx",
+    "app/entry.client.tsx",
     "workers/app.ts"
   ],
   "legacyPaths": [
@@ -25,71 +26,232 @@
       "hash": "9f92f6a4a8ffd789f4773852c7b17fad6e3252c3",
       "date": "2026-07-20",
       "notes": [
-        "v0 — all platform code consolidated into app/.stencil/, imported as ~stencil/*. The old platform locations (see legacyPaths) were removed with no compatibility shims. On the first update build after this lands, the sync replaces app/.stencil/ wholesale and deletes the legacyPaths copies; you then apply the import rewrites in `breaking` so the app resolves platform code from its new home."
+        "v0 — all platform code consolidated into app/.stencil/ (imported as ~stencil/*); old locations (see legacyPaths) removed with no shims. The first update build syncs app/.stencil/ wholesale and deletes the legacyPaths copies; then apply the import rewrites in `breaking`."
       ],
       "breaking": [
-        "Rewrite service-SDK imports from ~/lib/* to ~stencil/*: db, storage, ai, email, push, search, fetch, backend, hydration (they now live flat at the layer root, not under a lib/ subfolder). Leave ~/lib/utils as-is — it stays app-owned.",
-        "Rewrite auth imports from ~/auth to ~stencil/auth. One exception: in app/routes.ts import the auth route pack from the relative path ./.stencil/auth, because React Router's config loader can't resolve the ~stencil alias there.",
-        "Rewrite the strings runtime import from ~/strings to ~stencil/strings. app/strings/strings.json is app-owned copy — leave it unchanged.",
-        "Repoint the two pinned re-exports (their paths are fixed by React Router / wrangler, so they can't move into .stencil/): set workers/app.ts to `export { default } from \"~stencil/worker/app\";` and app/entry.server.tsx to `export { default } from \"~stencil/worker/entry.server\";`. Do this only on v0 — i.e. when the file does not already import from ~stencil/worker — so an app that has since extended either file keeps its changes.",
-        "Add \"~stencil/*\": [\"./app/.stencil/*\"] to compilerOptions.paths in BOTH tsconfig.json and tsconfig.cloudflare.json, alongside the existing \"~/*\" entry. Without it every ~stencil/* import fails to resolve (TS2307).",
-        "Add both \"app/.stencil/**/*\" and \".react-router/types/app/.stencil/**/*\" to the include list in tsconfig.cloudflare.json. TypeScript's ** glob skips dot-directories, so the layer's own files and its generated route types are otherwise outside the project (TS6307), which also hides app/.stencil/env.d.ts and breaks the Env bindings.",
-        "Add @source \"./.stencil\"; to app/app.css after the last @import. Tailwind's automatic source detection also skips dot-directories, so without it the layer's login/signup/payments UI compiles no classes and ships unstyled.",
-        "Delete any app-owned app/env.d.ts, and drop its \"app/env.d.ts\" entry from the tsconfig.cloudflare.json include list — the file is gone, and app/.stencil/**/* covers its replacement. The platform Env type and window.stencil globals now live in app/.stencil/env.d.ts (synced every build); a leftover app/env.d.ts would declaration-merge a stale interface Env. The sync removes it for you.",
-        "If platform code now requires a service binding your wrangler.jsonc doesn't declare, add its services entry. Deploy-injected optional bindings (e.g. PAYMENTS?) need no entry — only bindings the platform hard-requires do."
+        "Rewrite service-SDK imports ~/lib/* → ~stencil/* (db, storage, ai, email, push, search, fetch, backend, hydration — now flat at the layer root). Leave ~/lib/utils as-is (app-owned).",
+        "Rewrite auth imports ~/auth → ~stencil/auth. Exception: in app/routes.ts import the route pack from ./.stencil/auth (React Router's config loader can't resolve the ~stencil alias there).",
+        "Rewrite the strings runtime import ~/strings → ~stencil/strings. Leave app/strings/strings.json (app-owned copy).",
+        "Repoint the two pinned re-exports: workers/app.ts → `export { default } from \"~stencil/worker/app\";`, app/entry.server.tsx → `export { default } from \"~stencil/worker/entry.server\";`. Only on v0 (when the file doesn't already import from ~stencil/worker), so an extended file keeps its changes.",
+        "Add \"~stencil/*\": [\"./app/.stencil/*\"] to compilerOptions.paths in both tsconfig.json and tsconfig.cloudflare.json (else TS2307).",
+        "Add \"app/.stencil/**/*\" and \".react-router/types/app/.stencil/**/*\" to tsconfig.cloudflare.json include — TS's ** glob skips dot-dirs (TS6307), which also hides app/.stencil/env.d.ts.",
+        "Add @source \"./.stencil\"; to app/app.css after the last @import — Tailwind source detection skips dot-dirs, else the layer UI ships unstyled.",
+        "Delete any app-owned app/env.d.ts and drop its tsconfig.cloudflare.json include entry; it is replaced by app/.stencil/env.d.ts and the sync removes it for you."
       ]
     },
     {
       "hash": "337a9ea4c16e66b58e22de3d6a38e4f39344c946",
       "date": "2026-07-28",
       "notes": [
-        "Added the runtime image-generation SDK at the layer root: createImage(env) from ~stencil/image generates an image from a text prompt via Workers AI, proxied through the backend (no keys). Merged in from main, where it had landed at the pre-.stencil path app/lib/image.ts; re-homed to app/.stencil/image.ts so it is wholesale-synced like the other service SDKs.",
-        "Consolidated the auth transactional emails into app/.stencil/auth/auth-email.ts (reset, verification, magic link, OTP), superseding reset-email.ts, which was removed. sendAuthEmail(env, to, ...) now owns building and sending; it imports createEmail from ~stencil/email (../email) rather than the old ~/lib/email path."
+        "Added the runtime image SDK: createImage(env) from ~stencil/image generates an image from a prompt via Workers AI, proxied through the backend (no keys). Re-homed from app/lib/image.ts to app/.stencil/image.ts.",
+        "Consolidated auth transactional emails into app/.stencil/auth/auth-email.ts (reset, verification, magic link, OTP), replacing reset-email.ts; sendAuthEmail imports createEmail from ~stencil/email."
       ],
       "breaking": [
-        "If the app imports the image SDK from ~/lib/image (only possible on an app built off main during this initiative's review), rewrite it to ~stencil/image; the sync removes the stale app/lib/image.ts for you (it is now a legacyPath). Apps already on the v0 layer never had image gen — for them this is a new capability, nothing to rewrite.",
-        "No auth-email action needed: auth emails are internal to the platform layer and wholesale-synced, so the reset-email.ts → auth-email.ts consolidation and the magic-link/OTP support arrive automatically on the next build."
+        "If the app imports the image SDK from ~/lib/image, rewrite it to ~stencil/image; the sync removes the stale app/lib/image.ts. Apps on the v0 layer never had image gen — new capability, nothing to rewrite."
       ]
     },
     {
       "hash": "e9b26070f7adb1f777d4d2a43a34401fe526587e",
       "date": "2026-07-29",
       "notes": [
-        "Removed the inbound pull API from the email SDK (~stencil/email): createEmail(env) no longer exposes inbox()/getMessage()/markRead()/enableInbox() and now exports only send(), address(), and getAttachment(). Incoming mail is no longer read back over the backend binding — the platform now pushes every inbound email to the app's webhook at /api/internal/email-inbound, which stores it in the app's own D1."
+        "Removed the inbound pull API from ~stencil/email: createEmail(env) drops inbox()/getMessage()/markRead()/enableInbox(), keeping send(), address(), getAttachment(). Inbound mail is now pushed to the app webhook /api/internal/email-inbound into the app's own D1."
       ],
       "breaking": [
-        "If the app called any removed pull method (createEmail(env).inbox/getMessage/markRead/enableInbox), stop — they no longer exist. Read inbound mail from the app's own D1 table, populated by the /api/internal/email-inbound push webhook; see the email skill for the table and route. Apps with no inbound-email usage need no change."
+        "If the app called any removed pull method (inbox/getMessage/markRead/enableInbox), stop — read inbound mail from the app's own D1 table populated by /api/internal/email-inbound (see the email skill). No inbound-email usage → no change."
       ]
     },
     {
       "hash": "66cb44e3278dd0d09aeab764a96b90341ac7bdd5",
       "date": "2026-08-05",
       "notes": [
-        "Dropped the relative baseURL from createAuthClient (auth/browser.client.ts); better-auth >=1.5 throws on it ('Invalid base URL: /api/auth'). Falls back to the default /api/auth fetch path."
+        "Dropped the relative baseURL from createAuthClient (auth/browser.client.ts); better-auth >=1.5 throws on it. Falls back to the default /api/auth path."
       ],
       "breaking": [
-        "Nothing"
+        "none"
       ]
     },
     {
       "hash": "508dc50d591cfb1f489a90a49bce713d715ac4f7",
       "date": "2026-08-06",
       "notes": [
-        "Auth signup gate now covers social, magic-link and email-otp, so allowSignup:false actually stops new-account creation. The stencil genericOAuth provider sets disableImplicitSignUp:true; createAuth(env, disableSignup) threads disableSignUp into the magicLink and emailOTP plugins; the app auth handler reads the dispatcher's x-stencil-signup header. Returning users keep signing in with every enabled method."
+        "Auth signup gate now covers social, magic-link and email-otp, so allowSignup:false actually blocks new-account creation. Requires the matching dispatcher change (x-stencil-signup from AUTH_CONFIG.allowSignup)."
       ],
       "breaking": [
-        "Nothing — the auth layer is wholesale-synced, so the signup gate arrives automatically on the next build. Requires the matching dispatcher change (forces requestSignUp / x-stencil-signup from AUTH_CONFIG.allowSignup)."
+        "none"
       ]
     },
     {
       "hash": "e77be4b5ff947b71c0ed933a3c3fa3e6ed8ef3ae",
       "date": "2026-08-06",
       "notes": [
-        "payments/server.ts checkout() takes an optional interval ('month' | 'year', default 'month'), forwarded to the subscription checkout so a plan's annual price can be billed when the app has annual billing on.",
-        "payments/server.ts requireSubscription() now gates by plan-or-higher: a passed tierId unlocks that plan and any higher one per the plan order in ~/generated/tiers (tierOrder). Pass { exact: true } for the previous exact-plan match; omitting tierId still accepts any active subscription."
+        "payments/server.ts checkout() takes an optional interval ('month' | 'year', default 'month') so a plan's annual price can be billed when annual billing is on.",
+        "payments/server.ts requireSubscription() now gates by plan-or-higher via tierOrder in ~/generated/tiers; pass { exact: true } for the old exact-plan match. Omitting tierId still accepts any active subscription."
       ],
       "breaking": [
-        "Nothing — tierOrder is regenerated into ~/generated/tiers on the same build that syncs this layer, and a single-plan app's gating is unchanged (the plan only satisfies itself)."
+        "none"
+      ]
+    },
+    {
+      "hash": "50b4dee04b390869d5366748b623c5581b9e3cbf",
+      "date": "2026-08-10",
+      "notes": [
+        "payments/selling.ts adds disconnectSeller(request, context): removes the current user's seller account so they can start over (e.g. onboarded in the wrong country). Returns { removed:false, reason } without deleting when the seller has taken payments; re-onboarding mints a new Stripe account."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "6d559551377b10ec136085fe26b9190d465ef372",
+      "date": "2026-08-10",
+      "notes": [
+        "Apps can observe auth events by default-exporting Better Auth databaseHooks — or a (env) => databaseHooks factory — from app/auth-hooks.server.ts. Optional; createAuth composes it with the platform's hooks via withConsumerHooks(env)."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "e57a07bbde7e5f29bda8013f4cd7df26bec6e043",
+      "date": "2026-08-10",
+      "notes": [
+        "payments/server.ts checkout() no longer hard-defaults interval to 'month'. It forwards the caller's interval as-is and omits the field entirely when unset, so the worker picks the interval the plan actually offers — a yearly-only plan (no monthly price) now bills annually instead of hitting the new 409 monthly_not_available."
+      ],
+      "breaking": [
+        "Nothing to change — the payments SDK is wholesale-synced, so the fix arrives on the next build. Behavioral note: a subscribe action that calls checkout({ tierId }) without an interval now bills the plan's own interval rather than always monthly; monthly-only and both-price plans still bill monthly (unchanged), only yearly-only plans now bill annually as intended."
+      ]
+    },
+    {
+      "hash": "ce84083dd3d163fecc7739ad48e6625ee2895753",
+      "date": "2026-08-10",
+      "notes": [
+        "payments/selling.ts onboardSeller() takes an optional opts.country (ISO 3166-1 alpha-2). It is required by the worker the first time a seller onboards and forwarded to Stripe account creation; a connected account's country is fixed at creation and can never change. The app's own UI must collect it and show it can't be changed later."
+      ],
+      "breaking": [
+        "Apps that already build a seller-onboarding flow must add a country select (shown when the seller's status is 'none') and pass onboardSeller(request, context, { country }); without it, first-time onboarding now returns a 400. Resuming or fixing an existing account needs no change."
+      ]
+    },
+    {
+      "hash": "2a6318415eea068fe8c7957090350c5835c25bed",
+      "date": "2026-08-10",
+      "notes": [
+        "createAuth runs a platform user.create.after hook (auth/meta-capi.ts) that sends Meta CompleteRegistration to the Conversions API on new-account creation, gated on the builder having saved a pixel ID + CAPI token (fetched at runtime over BACKEND_SERVICE, so no rebuild). Fires once per registration across email and social sign-up, never for returning sign-ins, account-linking, or draft/preview; failures are swallowed and logged. createAuth(env, disableSignup, ctx) takes the request ExecutionContext for ctx.waitUntil."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "afc85c16965c6c56b3ace3258e463576551e6256",
+      "date": "2026-08-11",
+      "notes": [
+        "auth/utils.ts: the platform user.create.after hook is now an async callback so it matches better-auth's Promise<void> hook signature (>=1.5 types the after slot as returning a promise); the handler stays fire-and-forget on ctx.waitUntil. Fixes a tsc TS2322 that failed builds."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "e1b9aece62163ef453f14155ae4a5232e8e1aa18",
+      "date": "2026-08-12",
+      "notes": [
+        "image.ts: createImage(env) gains a transform(source, params) method — worker-compatible server-side image resize/crop/rotate/format-convert via the Cloudflare Images binding, proxied through the backend service (keyless in the app). source is an uploaded File/Blob, ArrayBuffer, or Uint8Array; it returns { body, contentType } like generate(), so the output pipes straight into R2. This is the supported path for image processing; Sharp and other native codecs can't run on Workers. See the image-transform skill."
+      ],
+      "breaking": [
+        "Nothing to change — additive, and the image SDK is wholesale-synced, so createImage().transform arrives on the next build."
+      ]
+    },
+    {
+      "hash": "49030d393fc62aa5004e7e8c715c4497cce6f716",
+      "date": "2026-08-12",
+      "notes": [
+        "image.ts: transform() type fix."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "88be4e091729fb9e4c81634c15a4e942afe84ae5",
+      "date": "2026-08-13",
+      "notes": [
+        "Added app/.stencil/connections/ — member connections. Each of an app's members connects their own third-party account (their Google Calendar, their Slack) and the app acts on their behalf; one member's data is never visible to another. Server SDK createConnections(env).as(memberId) with call/request/status/statuses/list/remove, plus brokenConnections() for background notification. requireConnection(request, env, memberId, provider) gates a loader and redirects to /app/connections when missing. Route pack stencilConnectionRoutes ships /app/connections and /api/connections/*. Client helpers: <ConnectButton> and useConnection(), fed from a loader through <ConnectionsProvider> — no useEffect fetching. Manifest lives in app-owned app/connections.ts."
+      ],
+      "breaking": [
+        "Nothing to change — wholly additive. Every file is new, no existing layer module was edited, and an app that does not import ~stencil/connections builds byte-identical. To USE it, two things go together in the same change: create app/connections.ts and spread ...stencilConnectionRoutes into app/routes.ts. A manifest with no registered route pack is a broken app, because requireConnection then redirects members to a 404."
+      ]
+    },
+    {
+      "hash": "564a8efde9acf376d0eac7c1d5792ddfcf300b2b",
+      "date": "2026-08-16",
+      "notes": [
+        "auth/utils.ts: createAuth(env, disableSignup, ctx, request) takes an optional request and sets Better Auth's baseURL from that request's own origin, falling back to the dev default when absent. Silences the per-request 'Base URL could not be determined' warning that flooded Monitoring; auth behaviour is unchanged. Per-origin (not a fixed env URL) so an app served on a custom domain and on apps./previews.hellostencil.com keeps correct redirect/reset links on every origin. The main auth handler, requireAuth/getSession, and logout now pass the request."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "328576ba6aa737707c1713dc6213ce50a897623b",
+      "date": "2026-08-17",
+      "notes": [
+        "auth: the user.create.after hook fans each new signup out to the platform (auth/signup-fanout.ts) on ctx.waitUntil, best-effort and skipped in dev, to drive Flodesk segment sync."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "22649ab4f6e0c095692e09dc9e6b7d30bb57b05b",
+      "date": "2026-08-17",
+      "notes": [
+        "error-boundary.tsx: new. PlatformErrorBoundary is the app-member error screen (plain-language message, Try again / Back to home, dev-only stack) and the only reporter of render failures — it posts the `render-error` window message the injector and published-app beacon listen for, now including route-error responses (wrong method, 5xx, thrown Response) tagged with status. 404s stay unreported (crawler noise). Copy is hardcoded, not `<Text>`, since it renders when the root loader may have thrown."
+      ],
+      "breaking": [
+        "app/root.tsx: replace the inline `ErrorBoundary` body with `import { PlatformErrorBoundary } from \"~stencil/error-boundary\";` returning `<PlatformErrorBoundary error={error} />`; drop the now-unused `isRouteErrorResponse`/`useEffect` imports. Keep the root loader and `rel=icon` link untouched.",
+        "Skip only if the app has a deliberately custom error screen — then leave it, but copy the `useEffect` reporter (including the route-error branch) or the builder is told nothing when a page fails."
+      ]
+    },
+    {
+      "hash": "d290e090555c5036915ed042be1059b4964265aa",
+      "date": "2026-08-18",
+      "notes": [
+        "image.ts: doc-only. generate() and transform() return a known-length body, so an app can pass it straight to createStorage().put(key, body); the backend now buffers both image endpoints instead of returning an unknown-length stream. No SDK signature or behaviour change."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "a690940a7ddecbaa3f90c2e94c38a96662a09163",
+      "date": "2026-08-05",
+      "notes": [
+        "createStorage(env).list() now strips the per-app public/<APP_ID>/ prefix off returned keys and delimitedPrefixes, matching put/get/head/delete; previously it returned fully-prefixed keys that double-prefixed to a 404 when fed back into get()/serveR2Object(), so an app couldn't re-read its own uploads."
+      ],
+      "breaking": [
+        "none"
+      ]
+    },
+    {
+      "hash": "c6902f4cee4264bd77e1ea0e5e9dac49620b939b",
+      "date": "2026-08-18",
+      "notes": [
+        "strings/index.tsx: loadStringsFromStorage() now falls back to the strings baked into the bundle (app/strings/strings.json) when R2 has no object, instead of returning {}. R2 stays the live source; the fallback only fires for a fresh app or a failed strings push, so copy is never blank. This also lets <Text> render real copy in prerendered HTML, where R2 is empty.",
+        "Prerendering is now gated: it runs on production publishes only, and only for apps on the builder's rollout allowlist. The gate lives in the app-owned react-router.config.ts; apps created before this change ship the old ungated config and are upgraded on their next build via the breaking step below."
+      ],
+      "breaking": [
+        "react-router.config.ts (app-owned root config — restored from the source archive, never synced by the layer): if it still has the pre-gate shape — `prerender` passed through directly, `future: { v8_viteEnvironmentApi: true }`, no mention of `STENCIL_PRERENDER` — upgrade it so prerendering only fires on gated production builds. Set the exported config's `prerender` to `process.env.STENCIL_PRERENDER === \"1\" && prerender.length > 0 ? prerender : false`, and add `unstable_previewServerPrerendering: true` to `future` (keep `v8_viteEnvironmentApi: true`). Ensure the imported `./prerender.ts` exists, exporting an empty `string[]` if it is missing. If the file already references `STENCIL_PRERENDER`, or has been deliberately customised, leave it — only make sure the gate is present."
+      ]
+    },
+    {
+      "hash": "b78853f6f047c2048a21e5e5fdf630f394c0da4a",
+      "date": "2026-08-18",
+      "notes": [
+        "hydration.tsx: new handleRecoverableError(error, errorInfo) — forwards a React recoverable error (a hydration mismatch, or a render React retried past) to the Stencil error beacon together with its component stack. Minification reduces these to a bare \"Minified React error #418\", which names nothing; the component stack survives minification and names the component that mismatched.",
+        "New app-owned app/entry.client.tsx in the template wires it into hydrateRoot's onRecoverableError. React's default rethrows recoverable errors, so a hydration mismatch surfaced as an uncaught window error and the preview's error overlay treated a self-healing render as a crash. Supplying onRecoverableError stops the rethrow and reports the component stack instead."
+      ],
+      "breaking": [
+        "app/entry.client.tsx (app-owned root file, never synced by the layer): create it if the app does not have one — without it React Router falls back to its built-in client entry, which has no onRecoverableError. Copy the template's file verbatim: import { startTransition, StrictMode } from \"react\"; import { hydrateRoot } from \"react-dom/client\"; import { HydratedRouter } from \"react-router/dom\"; import { handleRecoverableError } from \"~stencil/hydration\"; then startTransition(() => hydrateRoot(document, <StrictMode><HydratedRouter /></StrictMode>, { onRecoverableError: handleRecoverableError })). If the app already has an entry.client.tsx, leave its structure alone and only add the onRecoverableError option to its existing hydrateRoot call."
       ]
     }
   ]

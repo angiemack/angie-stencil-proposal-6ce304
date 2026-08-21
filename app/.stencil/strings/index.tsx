@@ -1,5 +1,6 @@
 import { type JSX } from "react";
 import { useRouteLoaderData } from "react-router";
+import bundledStrings from "~/strings/strings.json";
 import type stringsShape from "~/strings/strings.json";
 
 type Paths<T extends object> = {
@@ -31,7 +32,9 @@ export async function loadStringsFromStorage(
 ): Promise<Record<string, unknown>> {
   const key = env.IS_DRAFT === "true" ? "__stencil/strings.draft.json" : "__stencil/strings.json";
   const obj = await env.STORAGE.get(key);
-  return obj ? obj.json() : {};
+  // R2 is the live source; fall back to the strings baked into the bundle when it
+  // has no object (fresh app, or a failed strings push) so copy is never blank.
+  return obj ? await obj.json() : bundledStrings;
 }
 
 /** Loader factory that injects platform strings into loader data.
