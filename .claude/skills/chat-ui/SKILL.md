@@ -2,9 +2,9 @@
 name: chat-ui
 description: >
   Conversational AI / chat interface. Includes user / assistant bubbles, animated thinking dots with collapsible reasoning, tool-call card with collapsible output, and streaming bubble with typewriter cursor. Use when the brief asks for "chat", "conversation", "AI assistant", "agent UI", or "messaging".
+metadata:
+  agents: [builder]
 ---
-name: chat-ui
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

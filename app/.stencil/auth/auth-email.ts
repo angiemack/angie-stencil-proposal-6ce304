@@ -12,8 +12,8 @@
  *    space the theme tokens are authored in — so colors are converted to sRGB
  *    hex before they're used.
  *
- * Platform-owned: this file is refreshed onto existing apps by the builder's
- * `refreshPlatformLibs` (see `sandbox/builder/scenarios/build/prepare.ts`).
+ * Platform-owned: Stencil refreshes this file from the current platform layer
+ * on every build, so local edits do not persist.
  */
 
 import { createEmail } from "../email";

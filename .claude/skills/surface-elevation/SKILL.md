@@ -6,9 +6,9 @@ description: >
   shadow. Replaces the older "glassmorphism" mental model — see body for
   alias note. Use when designing cards, modals, popovers, dropdowns,
   command palettes, or any layered UI.
+metadata:
+  agents: [builder]
 ---
-name: surface-elevation
-
 > Alias note: this skill supersedes the older "glassmorphism" guidance. If
 > you were looking for blur/frost rules, see the Glass effect rule below —
 > it lives inside the broader elevation system.

@@ -2,9 +2,9 @@
 name: slide-deck
 description: >
   16:9 pitch / keynote slides. Four variants: editorial title slide, section divider with chapter number, two-column body with visual, and big-number stat slide. Pick whichever frame fits the slide; copy its function into your artifact and swap the copy. Page number strip auto-renders.
+metadata:
+  agents: [builder]
 ---
-name: slide-deck
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

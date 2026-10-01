@@ -2,9 +2,9 @@
 name: pricing
 description: >
   SaaS / product pricing sections. Four variants: 3-tier cards with highlighted plan, full feature comparison table, single-CTA flat-price hero, and freemium with monthly/annual toggle. Pick the variant that matches the pricing model.
+metadata:
+  agents: [builder]
 ---
-name: pricing
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

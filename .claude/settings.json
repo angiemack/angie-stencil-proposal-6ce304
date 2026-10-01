@@ -1,6 +1,5 @@
 {
-  "model": "claude-opus-4-8",
-  "effortLevel": "medium",
+  "model": "claude-opus-4-8[1m]",
   "permissions": {
     "deny": [
       "Edit(app/generated/**)",

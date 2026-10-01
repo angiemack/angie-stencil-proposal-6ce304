@@ -5,9 +5,9 @@ description: >
   and shapes the skeleton to match the real content geometry. Use when
   loading async content into a list, card grid, table, dashboard, or any
   surface where perceived performance matters.
+metadata:
+  agents: [builder]
 ---
-name: loading-skeleton
-
 ## When to use
 
 Trigger this skill when designing or implementing any async loading state:

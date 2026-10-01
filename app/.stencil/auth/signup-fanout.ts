@@ -1,4 +1,5 @@
 import { BACKEND_BASE, createBackendFetch } from "../backend";
+import { isDev } from "../context";
 
 /** `user.create.after` handler: fan the new signup out to the platform (drives
  *  Flodesk segment sync) past the signup response — on `waitUntil`, skipped in
@@ -8,7 +9,10 @@ export function handleSignupFanout(
   ctx: ExecutionContext | undefined,
   user: { id: string; email: string; name: string; createdAt: Date },
 ): void {
-  if (import.meta.env.DEV) return;
+  // Two different failures, both silent. A local run must never post to the
+  // platform even when a backend binding happens to be present; a deploy that
+  // lost the binding must not fall through to an unauthenticated plain fetch.
+  if (isDev(env) || !env.BACKEND_SERVICE) return;
   const run = sendSignupFanout(env, user).catch((err) =>
     console.error("[signup-fanout] platform signup POST failed:", err),
   );

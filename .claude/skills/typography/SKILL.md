@@ -7,9 +7,9 @@ description: >
   UIs, dashboards, marketing pages, and editorial surfaces. Stack with
   editorial-typography for long-form layouts or cjk-typography for CJK scripts
   — they do not overlap, they add specificity on top.
+metadata:
+  agents: [builder]
 ---
-name: typography
-
 ## When to use
 
 Trigger this skill when:

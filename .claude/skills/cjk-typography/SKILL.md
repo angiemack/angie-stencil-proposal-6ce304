@@ -6,9 +6,9 @@ description: >
   letter-spacing pitfalls, mixed-script spacing, body sizes, and vertical
   writing for editorial Japanese. Use when designing or coding any page
   whose audience reads zh / ja / ko.
+metadata:
+  agents: [builder]
 ---
-name: cjk-typography
-
 ## When to use
 
 Trigger this skill for any UI or document with:

@@ -2,7 +2,7 @@
 name: recurring-actions
 description: Scheduled server-side work — "every morning", "daily/weekly/hourly/nightly", "each evening", cron, recurring reminders, digest or summary emails, periodic refresh/cleanup/expiry, polling an inbox or feed on a schedule. Use when the brief asks for anything that must run repeatedly without the user opening the app. Covers the app/schedules.ts manifest, the trusted scheduled route, the cadence contract, and idempotency.
 metadata:
-  title: Recurring Actions (scheduled server-side work)
+  agents: [chat, builder]
 ---
 
 # Recurring actions
@@ -46,7 +46,7 @@ export const schedules: ScheduleManifestEntry[] = [
 
 ## 2. Do the work — `app/routes/api.internal.scheduled.tsx`
 
-The trusted route the platform hits. Its bearer-secret authentication is **platform-managed — leave it and the `env.SCHEDULE_TRIGGER_SECRET` check exactly as shipped.** All you add is a handler in `SCHEDULE_HANDLERS`, keyed by the same `name` as the manifest entry:
+The trusted route the platform hits. Its platform side is one **platform-managed** wrapper — `export const action = scheduledAction(SCHEDULE_HANDLERS)` from `~stencil/internal`, which verifies the injected bearer secret, acks immediately, and runs the matched handler in the background — **leave that export exactly as shipped.** All you add is a handler in `SCHEDULE_HANDLERS`, keyed by the same `name` as the manifest entry:
 
 ```ts
 const SCHEDULE_HANDLERS = {
@@ -57,16 +57,18 @@ const SCHEDULE_HANDLERS = {
 } satisfies Record<string, (args: ScheduleHandlerArgs) => Promise<void>>;
 ```
 
-Inside a handler you have the app's normal server-side toolkit: `createDb` (`~stencil/db`), `createAI` (`~stencil/ai`), `createEmail` (`~stencil/email`), `createStorage` (`~stencil/storage`), `createSearch` (`~stencil/search`), `createFetch` (`~stencil/fetch`), and plain `fetch()`.
+Inside a handler you have the app's normal server-side toolkit: `createDb` (`~stencil/db`), `createAI` (`~stencil/ai`), `createEmail` (`~stencil/email`), `createNotifications` (`~stencil/notifications` — the durable in-app record; see the `in-app-notifications` skill), `createStorage` (`~stencil/storage`), `createSearch` (`~stencil/search`), `createFetch` (`~stencil/fetch`), and plain `fetch()`.
+
+A handler that creates or mutates records an existing screen renders follows CLAUDE.md's "Server entry points that write records the app already shows" rules in full: the existing status vocabulary, the same server function the UI path uses, and one handler-created record seen on the existing screen before the feature is done.
 
 ## Cadence contract — state and respect it
 
 - **~5-minute floor.** The platform evaluates schedules on a 5-minute tick, so `* * * * *` still only fires about every 5 minutes. Sub-5-minute cadence isn't possible.
 - **Timezone-aware** (see `timezone` above) — a genuine step past UTC-only cron.
 - **Best-effort delivery with one retry.** A run can be missed; a transient dispatch failure (timeout, network, 5xx) is retried once, so a run can also arrive twice. A 4xx is never retried.
-- **Handlers MUST be idempotent.** Prefer upsert/reconcile over blind insert, and guard against overlap (e.g. check and stamp a `last_run_at` row) if a run could still be in flight when the next arrives. For inbox/feed polling, mark items processed (`markRead`) so the next run skips them.
-- **Return a real status code.** Every attempt is recorded; a non-2xx shows as a failed run in the owner's Automations panel.
-- **One normal request.** A scheduled run must fit normal request/CPU limits — no long crawls or multi-minute batch jobs.
+- **The platform only triggers you.** The route acks 202 immediately and the handler runs in the background — the platform never learns the result. A handler failure is logged as `[schedule:<name>] failed` and appears in the app's error log.
+- **Handlers MUST be idempotent and MUST guard against overlap.** Prefer upsert/reconcile over blind insert. A slow job can still be running when the next run arrives — check and stamp a `last_run_at` row before doing work. For inbox/feed polling, mark items processed (`markRead`) so the next run skips them.
+- **CPU budget.** A background handler gets the default ~30 s of CPU time; time spent waiting on the network doesn't count against it.
 
 ## Cadence is composer-set
 

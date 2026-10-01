@@ -1,6 +1,9 @@
 ---
 name: ai-sdk
-description: Use when writing or editing AI features — useChat, streamText, generateText, generateObject, embed, chat persistence, tool calls. Covers the correct @ai-sdk/react v3 / ai v6 API.
+description: Use when writing or editing AI features — useChat, streamText, generateText, generateObject, embed, chat persistence, tool calls. Covers the correct @ai-sdk/react v3 / ai v6 API, and the Zod schema rules for generateObject (no .min/.max constraints — Anthropic rejects them, e.g. "'minItems' values other than 0 or 1 are not supported").
+allowed-tools: createEntity
+metadata:
+  agents: [chat, builder]
 ---
 
 # AI SDK Reference (`ai` v6 / `@ai-sdk/react` v3)
@@ -13,6 +16,15 @@ description: Use when writing or editing AI features — useChat, streamText, ge
 import { createAI } from "~stencil/ai";
 const ai = createAI(context.cloudflare.env);
 ```
+
+## Model IDs
+
+Use these ids unless the task requires a specific other model:
+
+- Chat / generation: `ai.languageModel("anthropic:claude-sonnet-4-6")`
+- Embeddings: `ai.textEmbeddingModel("openai:text-embedding-3-small")`
+
+Every id must be namespaced `provider:model` (`anthropic:*` or `openai:*` — both providers are available in full). Do not write a bare or remembered id like `"claude-3-5-sonnet"`: `tsc` catches a missing `provider:` prefix, but a namespaced id with a wrong or stale model name type-checks and only 404s at runtime. If you need a model not listed above, take a current id from the provider's own model docs and namespace it — never guess the model name.
 
 ---
 
@@ -81,6 +93,32 @@ const { object } = await generateObject({
   prompt: "...",
 });
 ```
+
+**Schema rules (Anthropic rejects constraint keywords — every request 400s, deterministically):**
+
+Anthropic's structured outputs support only plain shapes: types, `enum`, `const`,
+`anyOf`/`allOf`, string `format`s (`date-time`, `email`, `uri`, `uuid`, …), and
+array `minItems` of 0 or 1. They **reject** numeric constraints (`minimum`,
+`maximum`, `multipleOf`), string lengths (`minLength`/`maxLength`), array counts
+beyond `.min(1)` (`minItems > 1`, `maxItems`), and recursive schemas. Zod methods
+that emit these — `.min()`, `.max()`, `.length()`, `.gte()`, `.lte()`,
+`.positive()`, `.multipleOf()` — make **every** `generateObject`/`streamObject`
+call fail with a generic error the app user just sees as "something went wrong".
+
+```ts
+// BAD — z.array(...).min(3) becomes minItems: 3 → Anthropic rejects the request:
+//   "For 'array' type, 'minItems' values other than 0 or 1 are not supported"
+schema: z.object({ ideas: z.array(z.string()).min(3).max(5) }),
+
+// GOOD — .min(1) is fine; put the count in .describe() and the prompt:
+schema: z.object({
+  ideas: z.array(z.string()).min(1).describe("Between 3 and 5 ideas"),
+}),
+prompt: "... Return between 3 and 5 ideas.",
+```
+
+If a count or range is a hard requirement, check it in code after the call and
+retry once — don't encode it in the schema.
 
 ### Embeddings
 

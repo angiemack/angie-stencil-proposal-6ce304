@@ -1,8 +1,9 @@
 ---
 name: hydration-safe-rendering
-description: Prevents and fixes React hydration mismatches — "Minified React error #418", #423, #425, "Hydration failed because the server rendered HTML didn't match the client", a page that flashes or re-renders on load, or an error report the app builder sends from a live preview. Apply whenever a component reads localStorage, sessionStorage, window, navigator, matchMedia, or the current date/time, whenever a lazy useState initializer is written, and before finishing any route that renders conditionally. Covers useHydrated/ClientOnly, the "typeof window" trap, and invalid tag nesting.
+description: Prevents and fixes React hydration mismatches — "Minified React error #418", #423, #425, "Hydration failed because the server rendered HTML didn't match the client", a page that flashes or re-renders on load, or an error report the app builder sends from a live preview. Apply whenever a component reads localStorage, sessionStorage, window, navigator, matchMedia, or the current date/time, whenever anything is keyed to the current day (a "today" view, a streak, a date stamp), whenever a lazy useState initializer is written, and before finishing any route that renders conditionally. Covers useHydrated/ClientOnly, the ~stencil/time viewer-timezone pattern, the "typeof window" trap, and invalid tag nesting.
+allowed-tools: appErrors
 metadata:
-  title: Hydration-Safe Rendering
+  agents: [builder]
 ---
 
 # Hydration-Safe Rendering
@@ -76,40 +77,54 @@ useEffect(() => {
 
 ## Rule 2 — When a block genuinely cannot render on the server, gate it
 
-`~stencil/hydration` exists for this. `useHydrated()` is `false` on the server
+`~stencil/ui/hydration` exists for this. `useHydrated()` is `false` on the server
 and on the first client render, then `true`; `ClientOnly` takes a function so its
 contents are never evaluated during SSR.
 
 ```tsx
-import { useHydrated, ClientOnly } from "~stencil/hydration";
+import { useHydrated, ClientOnly } from "~stencil/ui/hydration";
 
 const hydrated = useHydrated();
-return <span>{hydrated ? new Date().toLocaleDateString() : ""}</span>;
+return <span>{hydrated ? localStorage.getItem("draft") ?? "" : ""}</span>;
 
-<ClientOnly fallback={<span className="opacity-0">Good day</span>}>
-  {() => <span>Good {greetingForHour(new Date().getHours())}</span>}
+<ClientOnly fallback={<span className="opacity-0">Offline</span>}>
+  {() => <span>{navigator.onLine ? "Online" : "Offline"}</span>}
 </ClientOnly>
 ```
 
-## Rule 3 — Time and locale come from the loader, not from render
+Dates and times are **not** a case for gating — Rule 3 renders the viewer's real
+day on both sides with no blank first paint.
 
-Cloudflare renders in **UTC**; the browser renders in the visitor's timezone. So
-`new Date()`, `Date.now()`, `.getHours()`, `.toLocaleDateString()`,
-`Intl.DateTimeFormat` without an explicit `timeZone` all differ across the
-boundary.
+## Rule 3 — The clock and the timezone come from the loader, not from render
 
-Compute the clock **once in the loader** and pass it down — then both sides
-render the same string and no gating is needed:
+Cloudflare renders in **UTC**; the browser renders in the visitor's timezone, so
+`new Date()`, `.getHours()`, `.toLocaleDateString()` all differ across the
+boundary — and a "today" derived in UTC is the **wrong calendar day** for most
+viewers. One fix for both: the loader returns one clock plus the viewer's zone
+(the platform resolves it as `context.viewerTimeZone`), and everything formats
+through `~stencil/time`:
 
-```ts
-export async function loader() {
-  return { nowMs: Date.now(), items };   // one clock, serialized into the HTML
+```tsx
+import { todayInZone, formatTimeInZone } from "~stencil/time";
+
+export async function loader({ context }: Route.LoaderArgs) {
+  return { nowMs: Date.now(), timeZone: context.viewerTimeZone, items };
+}
+
+export default function Page({ loaderData }: Route.ComponentProps) {
+  const { nowMs, timeZone } = loaderData;
+  const today = todayInZone(timeZone, nowMs);       // the viewer's own "today"
+  const stamp = formatTimeInZone(nowMs, timeZone);  // "3:30 PM EDT"
+  // ...
 }
 ```
 
-Format from that `nowMs` with UTC-stable helpers (`getUTCMonth`, a month-name
-table, plain `YYYY-MM-DD` string comparison). Reach for `useHydrated()` only when
-the value must genuinely be the visitor's local time.
+Use the same pattern for anything keyed to the current day, including a date
+stamped on a record in an `action` (`todayInZone(context.viewerTimeZone)`). An
+app that genuinely runs on one fixed business zone passes a named IANA zone
+instead — never a numeric offset, which breaks at daylight-saving changes. Never
+derive dates with UTC helpers (`getUTC*`, `toISOString().slice(…)`) or gate them
+behind `useHydrated()`.
 
 ## Rule 4 — Never nest tags the HTML parser will rearrange
 
@@ -144,5 +159,5 @@ to make an error go away, you have not found the cause yet.
 - [ ] Does any `useState` lazy initializer touch `window`, `document`, `localStorage`, `sessionStorage`, `navigator`, or `matchMedia`? → move it into `useEffect`.
 - [ ] Does any `typeof window !== "undefined"` appear outside an effect or event handler? → it is a mismatch, not a guard.
 - [ ] Does any `&&` or ternary that decides whether an element renders depend on browser-only state? → default to the server's branch, reconcile in an effect.
-- [ ] Does any component call `new Date()`, `Date.now()`, or `toLocale*` during render? → move the clock to the loader.
+- [ ] Does any component call `new Date()`, `Date.now()`, or `toLocale*` during render, or derive "today" with UTC helpers? → move the clock to the loader and format with `~stencil/time`.
 - [ ] Any `<div>` inside `<p>`, `<a>` in `<a>`, or non-`<li>` child of `<ul>`? → restructure.

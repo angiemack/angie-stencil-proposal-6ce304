@@ -4,9 +4,9 @@ description: >
   Designs polished pitch deck slides and presentation layouts. Use when the
   user asks for a slide deck, investor pitch, presentation, or multi-slide
   narrative. Enforces slide structure, whitespace discipline, and one-claim-per-slide rule.
+metadata:
+  agents: [builder]
 ---
-name: pitch-deck
-
 ## Pitch Deck Design Principles
 
 ### One Claim Per Slide

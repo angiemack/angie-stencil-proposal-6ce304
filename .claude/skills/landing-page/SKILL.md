@@ -2,9 +2,9 @@
 name: landing-page
 description: >
   Full marketing landing pages — hero + social proof + features + testimonial + CTA. Three variants: editorial-serif (Fraunces, generous whitespace), product-tech (dense feature grid, dark accents), and minimal- startup (single column, big type, single CTA). For just the hero section, use heroes.jsx instead.
+metadata:
+  agents: [builder]
 ---
-name: landing-page
-
 ## Wiring rules for a real app (read FIRST — these are what break in production, not the visuals)
 
 The reference below is design guidance. When you add a landing page to an **actual Stencil app**, three wiring rules matter more than the layout. Getting rule 1 wrong ships a page that looks completely blank.
@@ -12,6 +12,7 @@ The reference below is design guidance. When you add a landing page to an **actu
 1. **`<Text>` is safe to prerender — but a prerendered page must be pure content.** Prerendering bakes the published `<Text>` copy into the HTML at build time, so a prerendered landing page shows its real headline, tagline, and button labels. What a prerendered route must **not** have is a `loader` that reads app data or a platform binding (DB, STORAGE, AUTH, payments…) — none of those exist during the build, and the route fails prerendering with a 500. Therefore:
    - Keep landing copy in `<Text>` as usual — it is the mandatory editable-strings path (see CLAUDE.md), and it prerenders correctly.
    - A landing page is safe to add to `prerender.ts` **only if** it is pure content with no data loader. If it needs a loader that reads app data, leave it SSR — do **NOT** add its path.
+   - The root loader in `app/root.tsx` runs for every prerendered path too, so if anything is prerendered it must not read `context.cloudflare.env` (or any binding) unguarded.
    - Prerendering only takes effect on a production publish for an allowlisted app; otherwise the page just SSRs, so adding a path is at worst a no-op.
 
 2. **The landing page must be reachable when logged out.** It usually replaces a home route that `redirect(...)`s into the authed app. Remove any auth loader/redirect from the landing route so a signed-out visitor sees the page — the `/` index should render the landing component directly, with no loader guard.

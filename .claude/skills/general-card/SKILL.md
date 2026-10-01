@@ -4,9 +4,9 @@ description: >
   Content panels for pipeline summaries, activity feeds, event lists, list
   breakdowns, and any grouped content that isn't a single KPI metric. Section
   heading lives outside the card. Card uses border only — no shadow.
+metadata:
+  agents: [builder]
 ---
-name: general-card
-
 Reference implementation — copy and adapt, do not reinvent.
 
 ## Hard rules

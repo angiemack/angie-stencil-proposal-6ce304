@@ -2,9 +2,9 @@
 name: editorial-typography
 description: >
   Editorial / long-form layout. Magazine-style typography for essays, journals, op-eds. Three variants: classical essay (drop cap, single column, pull quote), magazine spread (asymmetric two-column with sidebar), and minimal poetry layout (centered, generous whitespace, italic display). Numerical figures (read time, dates, page numbers) render in DM Sans / JetBrains Mono — never italic serif.
+metadata:
+  agents: [builder]
 ---
-name: editorial-typography
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

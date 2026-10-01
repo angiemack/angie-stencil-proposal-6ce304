@@ -1,6 +1,9 @@
 ---
 name: workspaces
 description: Use when data is shared between several people — workspaces, teams, organizations, shared accounts, "invite my teammates", "everyone in the group can see it", members and roles, switching between workspaces. Do NOT use for apps where each user owns their own private data; those scope by created_by and need none of this. Covers the data model, query scoping, switching, roles, UI shape, and retrofitting workspaces onto an app that already has data.
+allowed-tools: createEntity updateEntity regenerateSchema previewUser createRecord
+metadata:
+  agents: [chat, builder]
 ---
 
 # Workspaces — rules for a workspace-scoped app
@@ -17,6 +20,9 @@ Every app scopes user data by `created_by` **or** `workspace_id`. Pick one:
 
 Ambiguous briefs default to `created_by`. Retrofitting workspaces later is a well-worn
 path (last section); tearing them out is not.
+
+An app-wide admin outside any workspace (the app builder's own admin side, staff,
+"view as an app user"): see `app-roles`.
 
 ## Non-negotiable
 
@@ -37,11 +43,11 @@ nothing at all. Everything after this section is a recommendation.
 
 - Three entities: `workspaces` (name, created_by), `workspace_members` (workspace_id,
   user_id, email, name, role), `workspace_invites` (workspace_id, email, role, status,
-  token). Create with `dev-tools create-entity`; `app/generated/db-schema.ts` is
-  regenerated every build and never hand-edited.
+  token). Create with `createEntity`; `/home/user/app/app/generated/db-schema.ts`
+  is regenerated every build and never hand-edited.
 - Add `workspace_id` to tables holding **shared user data** — including ones the brief
   doesn't name, since a table without it is shared by every workspace. Skip lookup
-  tables, config, tiers, and anything account-shaped. `dev-tools db regenerate-schema`
+  tables, config, tiers, and anything account-shaped. `regenerateSchema`
   lists what exists so you can check coverage.
 - Keep `workspace_id` optional. Existing rows carry `NULL` until the backfill runs, and
   a required column blocks that path.
@@ -61,7 +67,14 @@ nothing at all. Everything after this section is a recommendation.
 - Give a user a workspace on first load rather than gating them behind a "create your
   first workspace" screen — mint a personal one and make them owner.
 - Accepting invites by email match on the invitee's next load avoids an accept-link route
-  and any dependency on email delivery. Sending the invite email is optional polish.
+  and any dependency on email delivery — but match only a **verified** address: require
+  `user.emailVerified === true` before granting the seat. `requireAuth` proves there is a
+  session, not that the account owns its email — password sign-up doesn't verify unless
+  the app's **Require email verification** login setting is on (see `custom-auth`), so
+  without the check whoever registers the invited address first takes the invitee's seat. On match,
+  store `user.id` on the membership and authorize by it from then on; the verified-email
+  gate is for the one-time linkage, never a blanket requirement on ordinary `user.id`
+  scoping. Sending the invite email is optional polish.
 - Both of the above put writes in a read path, so two loaders on one page can race and
   mint two workspaces. Acceptable for first-load provisioning; don't extend the pattern
   to anything higher-frequency.
@@ -76,8 +89,9 @@ nothing at all. Everything after this section is a recommendation.
   **all** loader data. A native `<form method="post">` → `redirect` gets that for free;
   a client-side submit re-runs some loaders and leaves stale rows on screen. Use the form
   unless you have a specific reason and have checked the whole page revalidates.
-- Set the cookie in the action and redirect back to the referer, validated same-origin
-  and in-app, falling back to the app root.
+- Set the cookie in the action and redirect back to the referer's path, passed through
+  `safeReturnTo` from `~stencil/auth/server` (it confines the target to the app and falls
+  back to the app root) — never a hand-rolled same-origin test.
 - Switching to a workspace the user doesn't belong to should be a silent no-op, not an
   error.
 

@@ -1,17 +1,22 @@
 ---
 name: generate-image
-description: How to write prompts and ship a coherent image set with `dev-tools generate-image` — heroes, products, backgrounds, illustrations, and rendered logos. Load before generating any bitmap asset.
+description: How to write prompts and ship a coherent image set with the `generateImage` tool — heroes, products, backgrounds, illustrations, and rendered logos. Load before generating any bitmap asset.
+allowed-tools: generateImage
+metadata:
+  agents: [builder]
 ---
 
 # Image Generation
 
-`dev-tools generate-image` calls Gemini 3 Pro Image. The whole prompt you pass is the whole prompt the model sees — there is no purpose flag, no style preset, no automatic constraint injection. Everything that should appear in the image needs to be in your sentence.
+`generateImage` takes your prompt and draws it. The whole prompt you pass is the whole prompt the model sees — there is no purpose flag, no style preset, no automatic constraint injection. Everything that should appear in the image needs to be in your sentence.
 
-```bash
-dev-tools generate-image "<prompt>" --name <slug> [--aspect-ratio <ratio>]
-```
+Three decisions come with every call, and only the first is craft:
 
-The result lands at `/assets/<slug>.png` and is referenced as `src="/assets/<slug>.png"`.
+- **The prompt.** Most of this page.
+- **Where it goes.** An image the app displays has to be *served*, which is what `public` does; it comes back as `/assets/<name>.png` and that is the path you write into the component. Nothing copies it there for you afterwards. An image you are only holding for a later build stays private.
+- **Which model draws it.** Use `gemini` for anything a visitor will see. Every craft rule below assumes it: the negative directives, the style-sentence coherence, the typography warning. The Workers AI models are cheaper and fine for a throwaway placeholder, and they will not honour any of it.
+
+Its input schema is in your tool list; read the field names there.
 
 ## Prompt anatomy
 
@@ -30,29 +35,25 @@ Two extras worth adding when relevant:
 
 ### Before / after
 
-❌ `"hero image for a coffee app"`  
+❌ `"hero image for a coffee app"`
 ✅ `"editorial photograph of an artisan coffee bar interior, warm afternoon sun through tall windows, espresso machine on a reclaimed wood counter, shallow depth of field, muted earth tones, generous negative space on the left for overlay copy, no visible text or signage"`
 
-❌ `"product shot of a mug"`  
+❌ `"product shot of a mug"`
 ✅ `"minimalist white ceramic mug on a grey concrete surface, overhead studio shot, soft diffused key light, subtle contact shadow, true-to-life colors, centered with even margins"`
 
 ## Batch the inventory before writing UI
 
-List every image slot you need *before writing components*. Generate them in one pass so the page composes against real assets, not gray rectangles.
+List every image slot you need *before writing components*, then generate them in one pass so the page composes against real assets rather than gray rectangles. A landing page usually means a hero at 16:9, a square logo mark, and a background texture — three calls, all public, named for what they are, before the first component exists.
 
-```bash
-dev-tools generate-image "editorial photograph of an artisan coffee bar interior, warm afternoon sun, shallow depth of field, generous negative space on the left for overlay copy, no text" --name hero --aspect-ratio 16:9
-dev-tools generate-image "minimalist line-art coffee cup mark, single-weight stroke, deep espresso brown on warm cream, centered, square composition, no text" --name logo --aspect-ratio 1:1
-dev-tools generate-image "dark linen texture, fine matte grain, uniform density, no hard vignettes" --name bg-texture --aspect-ratio 1:1
-```
-
-Then reference them:
+Then reference them by the paths you got back:
 
 ```tsx
 <img src="/assets/hero.png" alt="Coffee bar interior" />
 <img src="/assets/logo.png" alt="Brand mark" />
 <div style={{ backgroundImage: "url('/assets/bg-texture.png')" }} />
 ```
+
+A name is yours to choose and you will type it into code, so keep it short, descriptive and kebab-case: `hero`, `hero-mobile`, `logo`, `logo-dark`, `bg-texture`, `product-shot`, `feature-1`.
 
 ## Style coherence across a set
 
@@ -66,38 +67,29 @@ Then vary only subject + composition between images. Mixing *editorial photograp
 
 These aren't enforced by the tool — they're craft rules to bake into your prompts.
 
-**Hero (`16:9`)** — needs negative space on one side for overlay copy. Always say so explicitly: *"generous negative space on the right, low-contrast in that region for overlay readability."* Avoid centered subjects; they fight headlines.
+**Hero (16:9)** — needs negative space on one side for overlay copy. Always say so explicitly: *"generous negative space on the right, low-contrast in that region for overlay readability."* Avoid centered subjects; they fight headlines.
 
-**Background (`1:1` or `16:9`)** — must not compete with foreground content. Add: *"uniform density, low contrast in the upper third, safe to crop from any edge, no focal subject."* Textures (linen, paper, concrete, plaster) and blurred bokeh work better than detailed scenes.
+**Background (1:1 or 16:9)** — must not compete with foreground content. Add: *"uniform density, low contrast in the upper third, safe to crop from any edge, no focal subject."* Textures (linen, paper, concrete, plaster) and blurred bokeh work better than detailed scenes.
 
-**Product (`16:9` or `4:3`)** — clean studio context. Add: *"even studio lighting, subtle contact shadow, true-to-life colors, no surrounding clutter."* Don't ask for text or labels on the product itself — Gemini renders typography poorly; use SVG overlays instead.
+**Product (16:9 or 4:3)** — clean studio context. Add: *"even studio lighting, subtle contact shadow, true-to-life colors, no surrounding clutter."* Don't ask for text or labels on the product itself — Gemini renders typography poorly; use SVG overlays instead.
 
-**Poster (`9:16` or `4:3`)** — bold graphic frame for a title. Add: *"bold silhouette, confident limited palette, breathing room at the top for a headline."*
+**Poster (9:16 or 4:3)** — bold graphic frame for a title. Add: *"bold silhouette, confident limited palette, breathing room at the top for a headline."*
 
-**Illustration (`1:1` or `4:3`)** — lean on a named style: *"isometric illustration, flat shapes, pastel palette, clean line-weight, subtle paper grain."* Specify *"no text in the illustration."*
+**Illustration (1:1 or 4:3)** — lean on a named style: *"isometric illustration, flat shapes, pastel palette, clean line-weight, subtle paper grain."* Specify *"no text in the illustration."*
 
-**Logo mark (`1:1`)** — for a stylized or photoreal mark only; this won't give you vector. Add: *"centered, clean silhouette, limited palette, neutral background, no surrounding context, no text."* For wordmarks, use inline SVG with a font instead — don't generate text-bearing logos.
+**Logo mark (1:1)** — for a stylized or photoreal mark only; this won't give you vector. Add: *"centered, clean silhouette, limited palette, neutral background, no surrounding context, no text."* For wordmarks, use inline SVG with a font instead — don't generate text-bearing logos.
 
-## Aspect ratios
+### Which shape for which slot
 
-| Slot | Ratio |
+| Slot | Shape |
 |---|---|
-| Hero / banner / wide section | `16:9` |
-| Portrait / poster / mobile cover | `9:16` |
-| Square thumbnail / logo / icon-style mark | `1:1` |
-| Standard card / product | `4:3` |
-| Tall card / portrait crop | `3:4` |
+| Hero / banner / wide section | 16:9 |
+| Portrait / poster / mobile cover | 9:16 |
+| Square thumbnail / logo / icon-style mark | 1:1 |
+| Standard card / product | 4:3 |
+| Tall card / portrait crop | 3:4 |
 
-Omit `--aspect-ratio` only if the prompt is genuinely shape-agnostic.
-
-## Naming
-
-`--name` becomes the filename slug. Keep it short, descriptive, kebab-case.
-
-- `hero`, `hero-mobile`, `hero-features`
-- `logo`, `logo-dark`, `logo-mark`
-- `bg-texture`, `bg-mesh`, `bg-blur`
-- `product-shot`, `team-photo`, `feature-1`
+Leave the shape unset only when the prompt is genuinely shape-agnostic.
 
 ## Iterating when output isn't right
 

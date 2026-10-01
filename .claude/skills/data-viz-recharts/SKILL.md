@@ -5,9 +5,9 @@ description: >
   dashboards, analytics views, or any data-driven UI with Recharts or
   comparable charting libraries. Enforces brand-consistent colors, readable
   axes, and accessible chart patterns.
+metadata:
+  agents: [builder]
 ---
-name: data-viz-recharts
-
 ## Data Visualization with Recharts
 
 ### Color Palette

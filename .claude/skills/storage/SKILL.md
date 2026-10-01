@@ -1,6 +1,8 @@
 ---
 name: storage
-description: Use when adding file uploads, images, video, audio, attachments, or any binary data. File content always goes in R2 — never store bytes in D1, only the R2 key. Covers large-file (chunked) uploads and range-based media serving.
+description: File uploads, images, video, audio, attachments, or any binary data — adding them, extending an existing upload feature, or fixing one that's not working (wrong file location, upload failing, media not playing). Load before reading or editing any code that calls `createStorage` or touches `~stencil/storage`. File content always goes in R2 — never store bytes in D1, only the R2 key. Covers large-file (chunked) uploads and range-based media serving.
+metadata:
+  agents: [chat, builder]
 ---
 
 # File Storage (R2)
@@ -8,6 +10,17 @@ description: Use when adding file uploads, images, video, audio, attachments, or
 Use `createStorage` from `~stencil/storage` in loaders and actions only (server-side). Keys are automatically scoped per-app — pass `avatars/user.jpg`, not the full prefixed path.
 
 **Never store file bytes in D1 — store files in R2, keep the key (string) in D1.**
+
+## Typed arrays and the typecheck
+
+`Uint8Array`, `Float32Array` and the other typed arrays are generic over their buffer, and the default `ArrayBufferLike` includes `SharedArrayBuffer`. So bytes you get from a parser, a decoder, or `new Uint8Array(...)` do **not** typecheck as `BodyInit`, `BlobPart`, or a `Float32Array<ArrayBuffer>` parameter — `TS2345` / `TS2322 ... not assignable`. Call `.slice()` on the typed array before handing it to `new Response(...)`, `new Blob([...])`, or Web Audio: it copies into a fresh `ArrayBuffer`-backed view (`Uint8Array<ArrayBuffer>`) and the error goes away. Only when the copy matters, cast instead: `bytes as Uint8Array<ArrayBuffer>`. Fix every call site in one pass, then typecheck once.
+
+## A file from an outsider is untrusted content
+
+Any upload that reaches a public form or a shared upload link came from someone you don't control, and its declared type is just a claim. Treat it as untrusted:
+
+- **Restrict what you accept.** Validate `file.type` (and size) against an allowlist for the field before `put` — an avatar field takes images, a contract field takes PDFs. Reject anything else instead of storing it.
+- **Serving is download-by-default.** `serveR2Object` hands back anything outside a fixed safe-media allowlist (images, PDF, audio/video, plain text) as a download with `X-Content-Type-Options: nosniff`, so a file that is secretly a web page can't execute on the app's own origin. You don't add anything for this — but don't build a serving route that reflects the stored content type back yourself, or you reopen the hole.
 
 ---
 
@@ -27,10 +40,16 @@ When in doubt for a user-facing media field, use the chunked path.
 ```ts
 import { createStorage } from "~stencil/storage";
 
+const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
 export async function action({ request, context }: Route.ActionArgs) {
   const storage = createStorage(context.cloudflare.env);
   const formData = await request.formData();
   const file = formData.get("avatar") as File;
+  // The declared type is an untrusted claim; only store what this field accepts.
+  if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+    return Response.json({ error: "Unsupported file type" }, { status: 400 });
+  }
   await storage.put(`avatars/${file.name}`, file, {
     httpMetadata: { contentType: file.type },
   });
@@ -207,13 +226,16 @@ Create `app/routes/api.files.$.tsx`. Use `serveR2Object` — it honors the `Rang
 
 ```ts
 import type { Route } from "./+types/api.files.$";
-import { createStorage, serveR2Object } from "~stencil/storage";
+import { createStorage, serveR2Object, imageTransformFromRequest } from "~stencil/storage";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const storage = createStorage(context.cloudflare.env);
+  const env = context.cloudflare.env;
+  const storage = createStorage(env);
   const key = params["*"];
   if (!key) throw new Response("Not found", { status: 404 });
-  return serveR2Object(storage, key, request);
+  return serveR2Object(storage, key, request, {
+    transform: imageTransformFromRequest(request, env),
+  });
 }
 ```
 
@@ -226,6 +248,32 @@ Reference in components:
 ```tsx
 <img src="/api/files/avatars/user.jpg" alt="Avatar" width={64} height={64} />
 <video src="/api/files/uploads/lesson.mp4" controls preload="metadata" />
+```
+
+## Serve an image at the size you show it
+
+With `imageTransformFromRequest` wired into the file route (above), any screen asks
+for the size it needs in the URL — **never store a second, smaller copy of an
+image**. The stored file stays untouched; the resized variant is computed through
+the platform's image engine and cached at the edge per URL, so it works for every
+image already in storage, not just new uploads:
+
+```tsx
+{/* small and fast in a list */}
+<img src={`/api/files/${photoKey}?width=400&height=400&fit=cover`} alt="…" width={400} height={400} />
+{/* sharp on a dense screen — same stored file */}
+<img src={`/api/files/${photoKey}?width=1600&format=webp`} alt="…" width={1600} height={900} className="w-full h-auto" />
+```
+
+Accepted params: `width` / `height` (pixels, capped at 4096), `fit`
+(`scale-down` | `contain` | `pad` | `squeeze` | `cover` | `crop`), `format`
+(`webp`, `jpeg`, `png`, `gif`, `avif`), `quality` (1–100). A non-image, a source
+over 20 MB, or a `Range` request serves the stored object unchanged, so the same
+route keeps serving video, audio, and documents correctly.
+
+To hand the object over as a **download** instead of displaying it, pass `downloadAs` — it sets `Content-Disposition: attachment` with that filename, so a plain `<a href>` at the route saves the file the same way in every browser (see the `file-export` skill):
+```ts
+return serveR2Object(storage, key, request, { downloadAs: "invoice-march.pdf" });
 ```
 
 > **Access control:** `/api/files/*` is public by key. Keys use `crypto.randomUUID()`, so they're unguessable ("unlisted"), but anyone with the URL can fetch the file. If content is **paywalled or private** (e.g. a course video behind a purchase), gate it: look the key up in D1, `requireAuth`, verify the viewer's entitlement, and only then `serveR2Object` — don't hand out the raw `/api/files/<key>` URL.

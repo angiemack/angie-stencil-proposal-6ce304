@@ -1,5 +1,5 @@
 {
-  "hash": "b78853f6f047c2048a21e5e5fdf630f394c0da4a",
+  "hash": "3bb27d71c00080a6667aab1605f25aa6b252351e",
   "files": [
     "app/entry.server.tsx",
     "app/entry.client.tsx",
@@ -88,7 +88,7 @@
         "payments/server.ts requireSubscription() now gates by plan-or-higher via tierOrder in ~/generated/tiers; pass { exact: true } for the old exact-plan match. Omitting tierId still accepts any active subscription."
       ],
       "breaking": [
-        "none"
+        "app/generated/tiers.ts must export tierOrder; snapshots generated before this date do not. The platform rewrites the snapshot from the live tier catalog during prepare, so it should already be current — if tsc still reports TS2305 (no exported member 'tierOrder') or TS2307 (cannot find '~/generated/tiers'), report the failure instead of repairing it: never hand-write app/generated/tiers.ts, derive tierOrder from the tiers object (old key order is meaningless), or remove the tierOrder import from payments/server.ts — that silently turns plan-or-higher gating into an exact-plan match."
       ]
     },
     {
@@ -253,6 +253,655 @@
       "breaking": [
         "app/entry.client.tsx (app-owned root file, never synced by the layer): create it if the app does not have one — without it React Router falls back to its built-in client entry, which has no onRecoverableError. Copy the template's file verbatim: import { startTransition, StrictMode } from \"react\"; import { hydrateRoot } from \"react-dom/client\"; import { HydratedRouter } from \"react-router/dom\"; import { handleRecoverableError } from \"~stencil/hydration\"; then startTransition(() => hydrateRoot(document, <StrictMode><HydratedRouter /></StrictMode>, { onRecoverableError: handleRecoverableError })). If the app already has an entry.client.tsx, leave its structure alone and only add the onRecoverableError option to its existing hydrateRoot call."
       ]
+    },
+    {
+      "hash": "69bd298d4310c43026897a27c33cf913c6d5ebc8",
+      "date": "2026-08-23",
+      "notes": [
+        "image.ts: new createImage(env).fromPdf(source, { page, width, format }) — renders one page of a PDF to an image."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "6480881efd75c1e0a76af9904fb00887133c1be0",
+      "date": "2026-08-24",
+      "notes": [
+        "navigation-bridge.tsx: new. StencilNavigationBridge lets the preview toolbar's page switcher navigate the running app through its client router instead of reloading the iframe. It listens for a stencil:navigate window message from the preview parent and calls useNavigate, and posts a navigate-bridge:ready announce on mount so the parent only uses smooth nav when the bridge is present. Inert outside the preview iframe; renders nothing."
+      ],
+      "breaking": [
+        "app/root.tsx (app-owned): render the bridge once at the app root so preview navigation is client-side. Add `import { StencilNavigationBridge } from \"~stencil/navigation-bridge\";` and render `<StencilNavigationBridge />` alongside the root `<Outlet />` (e.g. wrap them in a fragment). Without it the preview still navigates, but by reloading the iframe on every page change. Nothing else to change — the component is wholesale-synced."
+      ]
+    },
+    {
+      "hash": "1f615a9406d3141c6a971c9dffec31326f7a49f1",
+      "date": "2026-08-25",
+      "notes": [
+        "connections/connect-button.tsx: ConnectButton now tells the APP BUILDER when a provider is unavailable, instead of rendering nothing to everyone. Members still see nothing on a published app, which is the correct behaviour and unchanged. The notice appears only on draft and preview hostnames, and only after mount so server and client markup still match. It names the setting to change. This closes the gap where an app builder saw an empty page with no reason for it and asked repeatedly for a button that was already in the code."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "e26ccfbd28e12e7bd7bbb92924957b37048dae52",
+      "date": "2026-08-26",
+      "notes": [
+        "Added ~stencil/remotion: createRemotion(env) exposes render/status/cancel/list. Renders run on the platform through the Stencil backend service (no keys, server-side only) and return an R2 key in the app's own storage — never bytes — so persist the jobId and the finished key in D1 and serve the video from your own route.",
+        "Added ~stencil/internal: internalAction<T>() wraps an app callback as a trusted platform->app POST receiver (bearer check via verifyPlatformBearer against SCHEDULE_TRIGGER_SECRET, JSON parse, retry-on-throw). Use it with the exported RemotionCompletePayload type in an app-owned app/routes/api.internal.remotion-complete.tsx to receive render-completion webhooks."
+      ],
+      "breaking": [
+        "Add route(\"api/internal/remotion-complete\", \"routes/api.internal.remotion-complete.tsx\") to app/routes.ts. The route file itself is already in place."
+      ]
+    },
+    {
+      "hash": "da60a07c797fa71b9d27b171cf0b600bf58de396",
+      "date": "2026-08-26",
+      "notes": [
+        "createRemotion(env).render() now tells the platform which deploy asked for the render, using IS_DRAFT."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "d8236f6991e5ac7aa350e95b6c4a1ee10947cd2d",
+      "date": "2026-08-26",
+      "notes": [
+        "Better Auth session create/update hooks fan member activity out to the platform (auth/activity-fanout.ts), feeding app_member_active analytics. Best-effort: skipped in dev, errors swallowed, never blocks a login or refresh."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "460760a2816eaee11d2e322ec3dc4516fbee8b53",
+      "date": "2026-08-26",
+      "notes": [
+        "connections/routes.tsx: the conditional `~/connections` import uses @ts-ignore instead of @ts-expect-error."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "bcfd7a9da831a643d332e230c7023247cdd90cd9",
+      "date": "2026-08-27",
+      "notes": [
+        "backend.ts: every backend call sends `x-stencil-preview`, so the platform reads the app's deployment instead of inferring it."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "cdef51f43dedd81306a02cbd755239577a7c57fc",
+      "date": "2026-08-28",
+      "notes": [
+        "connections: ProxyRequest gains an optional `as`, naming which identity to act as for a provider whose single authorization returns several. Omit it and nothing changes — every existing call keeps the default identity.",
+        "Slack is the only provider with identities today: member.request(\"slack\", { ... }) posts as the APP, and adding as: \"member\" posts as the MEMBER, from the same connection.",
+        "An `as` the connector does not declare, or one the member did not grant, fails with identity_not_granted and a message listing what is available. It never falls back to the default."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "923379107355fd1c7bde5625c8dbc185ecdb40f7",
+      "date": "2026-08-28",
+      "notes": [
+        "Added app/.stencil/mcp/ — the OAuth authorization layer that lets an app member grant an AI client access to their account. createAuth now mounts Better Auth's mcp plugin (OAuth 2.1 provider with dynamic client registration), reusing the oidc-provider tables. Route pack stencilMcpRoutes serves the two discovery documents (/.well-known/oauth-authorization-server and /.well-known/oauth-protected-resource, with permissive CORS) and the consent page at /oauth/consent. The consent page leads with the client's redirect host as the true identity, since registration is open and the client name is attacker-chosen.",
+        "OAuth tables (oauth_application, oauth_access_token, oauth_consent) are added to the auth schema and seed, and ensureMcpTables(env) creates them on first OAuth traffic so apps provisioned before this shipped need no migration."
+      ],
+      "breaking": [
+        "Add the route pack to app/routes.ts (app-owned, not synced): import { stencilMcpRoutes } from \"./.stencil/mcp\"; and spread ...stencilMcpRoutes alongside ...stencilAuthRoutes. Without it the discovery documents and consent page 404 and no AI client can authorize. Everything else is wholesale-synced — the mcp plugin, the ensure call, and the tables arrive on the next build with no further change."
+      ]
+    },
+    {
+      "hash": "96f68593d8b4dd2eba331d08c72c5c694aa1da9f",
+      "date": "2026-08-28",
+      "notes": [
+        "mcp: an app becomes an MCP server by declaring tools in app-owned app/mcp.ts (export const mcp: McpManifest). Each tool has a zod input schema (published to clients as JSON Schema) and a handler that runs as the connected app member (ctx.member, ctx.env); scope its data to the member as a loader would. The tool() helper infers each handler's args from its own input schema. loadMcpManifest() reads it lazily, so an app that declares nothing still builds.",
+        "mcp: stencilMcpRoutes now serves POST /mcp — a stateless JSON-RPC handler (initialize, tools/list, tools/call, notifications) gated by the Better Auth OAuth token, resolving the member from the token before dispatch. A tool that throws returns an isError result, not a JSON-RPC error, so the model still reads it.",
+        "mcp: /mcp and both OAuth discovery documents return 404 until app/mcp.ts declares at least one tool — an app with no tools advertises no MCP surface at all."
+      ],
+      "breaking": [
+        "Nothing to change beyond adding stencilMcpRoutes to app/routes.ts (the earlier mcp entry's step) — /mcp arrives in that wholesale-synced route pack. To expose MCP, declare a tool in app-owned app/mcp.ts; absent or empty (the shipped default), the app serves no MCP surface."
+      ]
+    },
+    {
+      "hash": "40be3fcb42b26d25e48b2a9b83f77015436a2540",
+      "date": "2026-08-28",
+      "notes": [
+        "mcp: the public OAuth dynamic-client-registration endpoint (POST /api/auth/oauth2/register, open per RFC 7591) is now rate-limited per app (mcp/dcr-throttle.ts, enforced in the auth catch-all before Better Auth runs). Once oauth_application rows created in the last hour reach a ceiling, further registrations get a 429 with Retry-After; the sliding window is self-cleaning, so a burst is throttled without locking out real AI clients."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "9a8f7d00d51005bcc79d2ec2df7173450e326699",
+      "date": "2026-08-28",
+      "notes": [
+        "mcp/consent.tsx: the consent action forwards an Origin header on the synthetic POST to /api/auth/oauth2/consent, falling back to the request's own origin. Better Auth's CSRF check rejects a cookie-bearing request with no Origin/Referer, so 'Allow access' always failed with 'Missing or null Origin' and no AI client could complete authorization."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "af91315ceb77ecd33b8a782eb56374ad7624df21",
+      "date": "2026-08-28",
+      "notes": [
+        "auth/utils.ts: the mcp plugin is cast to BetterAuthPlugin so its return type — which names better-auth's unexported MCPOptions — can no longer leak into createAuth's inferred return type and fail declaration emit with TS4058. mcp/route.ts re-asserts getMcpSession, which the cast drops from the api type. Type-only, runtime unchanged.",
+        "auth/utils.ts: loginPage is also set inside oidcConfig — OIDCOptions.loginPage is required, so the literal missing it fails TS2741 in app typechecks (the top-level MCPOptions.loginPage does not flow down).",
+        "mcp/discovery.ts: the discovery helpers are called branched with a local re-assert of getMcpOAuthConfig/getMCPProtectedResource — the union-typed call was never callable (TS2349, incompatible generic signatures), and the BetterAuthPlugin cast drops the endpoints the helpers' constraints require (TS2345). Type-only, runtime unchanged."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "4b7af2f0a1920ba0f206d85c29f38e9f57a1a3a9",
+      "date": "2026-09-01",
+      "notes": [
+        "mcp/index.ts, mcp/manifest.ts: comment-only vocabulary rename — the person a tool call runs as is an \"app user\" (formerly \"app member\"). No runtime change."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "e6cffe8b60127328397e827a3c54adf57666797b",
+      "date": "2026-09-06",
+      "notes": [
+        "auth/schema.ts, auth/db-seed.sql, payments/server.ts: the subscription table gains a nullable cancel_at column (epoch seconds). It is set while an app user's cancellation is pending: the subscription stays active (and entitled) until that date but will not renew, so apps can show \"Cancelled — access until {date}\" instead of a renewal date. requireSubscription/getSubscription return it on the row; entitlement logic is unchanged. Reads self-heal apps provisioned before the column existed by adding it on first touch."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "6431481d7ca5ef9b168a06754eecfd9cdae78d3a",
+      "date": "2026-09-06",
+      "notes": [
+        "payments/selling.ts: guest checkout — a buyer with no app account can now check out and be identified by email alone (new guestBuyerRef, hasPurchased/getPurchases accept buyerEmail)."
+      ],
+      "breaking": [
+        "hasPurchased/getPurchases no longer redirect an anonymous visitor to /login — they return false/[] instead. If a gated route relied on that implicit redirect to force sign-in, add an explicit auth check or redirect there."
+      ]
+    },
+    {
+      "hash": "1372c27135794bd333a58590540bf095187d5c81",
+      "date": "2026-09-06",
+      "notes": [
+        "auth/auth-email.ts: comment-only cleanup — no runtime change."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "b9a92a08cc7902e410f7e08ef79fd1ed175ea312",
+      "date": "2026-09-06",
+      "notes": [
+        "image.ts, watermark.ts: createImage(env).transform gains a `watermark` param — composites a mark onto the picture server-side, naming it by its key in this app's own storage rather than sending its bytes (key, position, opacity, scale, repeat, margin). New watermark.ts holds the option types.",
+        "image.ts: transform's source is capped at the Images binding's 20 MB input limit and reported as a 413."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "85c6e8ca6ea4c1824051de9cb0b2836d86b0a4b6",
+      "date": "2026-09-06",
+      "notes": [
+        "storage.ts: serveR2Object is now download-by-default. Only a fixed safe-media allowlist (raster images, PDF, plain text, common audio/video) serves inline, under a server-pinned type; everything else gets Content-Disposition: attachment as application/octet-stream, and every response carries X-Content-Type-Options: nosniff. Closes a stored-XSS path where an uploaded file that was secretly HTML/SVG ran same-origin with the viewer's session."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "7161feb6d07961fb711aa37e5f13f40095f3aba7",
+      "date": "2026-09-06",
+      "notes": [
+        "Added ~stencil/files — file export + download helpers: toCsv (spreadsheet-safe CSV with formula-injection neutralisation, BOM, RFC 4180 quoting), fileResponse (serve bytes as a named download; Content-Type and Content-Disposition derived from the filename), saveFile (browser-side save of client-generated data), contentTypeFor, contentDisposition.",
+        "serveR2Object (~stencil/storage) gained a downloadAs option: sets Content-Disposition: attachment with the given filename, so a stored artifact (an upload, a finished video render) is delivered as a file download."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "07f19f14aded064e4d62ea4a6ba987374c7dfbc6",
+      "date": "2026-09-07",
+      "notes": [
+        "internal.ts: added scheduledAction(handlers) and ScheduleHandlerArgs — wraps the trusted scheduled route: verifies the platform bearer, matches the x-stencil-schedule-name header to a handler, acks 202 immediately, and runs the handler in the background via ctx.waitUntil. A handler failure is logged as [schedule:<name>] failed and surfaces in the app error log; nothing is reported back to the platform.",
+        "routes/api.internal.scheduled.tsx: the template route is now the one-line export const action = scheduledAction(SCHEDULE_HANDLERS) instead of inline bearer auth + await-the-handler dispatch, so scheduled work is no longer bounded by the platform trigger request (which times out at 15 s)."
+      ],
+      "breaking": [
+        "If app/routes/api.internal.scheduled.tsx contains the old inline pattern (a local timingSafeEqual + SCHEDULE_TRIGGER_SECRET bearer check, a local ScheduleHandlerArgs type, and an action that awaits the matched handler), replace ONLY that plumbing with: import { scheduledAction, type ScheduleHandlerArgs } from \"~stencil/internal\" and export const action = scheduledAction(SCHEDULE_HANDLERS);. Leave the SCHEDULE_HANDLERS map — the app builder's own handlers — completely untouched.",
+        "Do NOT force this migration: the old inline route is still valid and keeps working (the platform records its inline 200 as an ok run). Migrate only when this file is already being touched or the app has schedules that need more than ~15 s."
+      ]
+    },
+    {
+      "hash": "d5568c1d8cd561916a655a659dffbbe7446ecb09",
+      "date": "2026-09-07",
+      "notes": [
+        "Added ~stencil/time — viewer-timezone dates: resolveViewerTimeZone(request) (Cloudflare's IP-derived zone, else UTC), todayInZone, formatDateInZone, formatTimeInZone (zone-labelled). The worker entry puts viewerTimeZone on the load context.",
+        "hydration.tsx: doc-only — date/time UI is pointed at ~stencil/time instead of post-hydration local dates; useHydrated/ClientOnly gating stays for genuinely browser-only state.",
+        "Non-breaking; when already editing date code, prefer ~stencil/time over UTC-derived \"today\" or fixed numeric offsets."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "5de4f16190d7952a2db13b936ecaad8e8cc491b6",
+      "date": "2026-09-08",
+      "notes": [
+        "mcp/route.ts: each tools/call now reports usage telemetry (tool name, outcome, duration, app user id — never arguments or results) to the backend service, fire-and-forget."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "d62fb5835fdac4468d9c8540ebae764dfed00481",
+      "date": "2026-09-09",
+      "notes": [
+        "Layer split into ui/, types/, react-router/ and framework-agnostic server code; boundaries enforced in CI.",
+        "UI takes props and React context instead of reading the router; react-router/ holds the adapters (<StencilRoot>, PlatformErrorBoundary).",
+        "Server SDKs off React Router: redirect() from ~stencil/http, AppContext from ~stencil/types/context.",
+        "strings/index.tsx, connections/routes.tsx, mcp/consent.tsx and the three route packs split along the same line.",
+        "app/mcp.ts, app/connections.ts and app/auth-hooks.server.ts always ship and are imported statically; loadMcpManifest moved to mcp/app-manifest.ts.",
+        "isDev(env) reads STENCIL_ENV instead of import.meta.env.DEV; added ~stencil/context (fromHono, isDev).",
+        "The sync applies the `renames` block automatically — import/export statements and `import(\"…\")` type queries — so an update build starts with the moved imports already rewritten and only the judgement-shaped steps left.",
+        "react-router/connections/page.tsx types the app manifest itself, so an app/connections.ts written with `satisfies ConnectionManifest` typechecks."
+      ],
+      "breaking": [
+        "The sync has already rewritten every moved import from this entry's `renames` — 282 files on a real app. Do not redo it. Verify with a grep for `~stencil/strings`, `~stencil/hydration`, `~stencil/auth/context`, `~stencil/error-boundary`, `~stencil/worker/`, `~stencil/connections/connect-button`, `~stencil/auth/passthrough` and `./.stencil/{auth,mcp,connections}`; a survivor is a shape the codemod refuses to guess at and is yours to fix. Note `~stencil/mcp` is deliberately not on that list: only stencilMcpRoutes and loadMcpManifest left it, so an import of `tool`, `ensureMcpTables` or the Mcp* types from `~stencil/mcp` is correct — leave it.",
+        "app/root.tsx — THE step, and the only one nothing catches. Wrap <Outlet /> in <StencilRoot> from ~stencil/react-router/root, whether or not the app previously rendered <StencilNavigationBridge />. <Text> now reads a React context instead of the root loader, so an app that skips this builds clean, deploys, and shows every string on every page as empty. Remove <StencilNavigationBridge /> if present — <StencilRoot> renders it.",
+        "app/root.tsx — adopt PlatformErrorBoundary from ~stencil/react-router/error-boundary, per the 2026-08-17 entry, replacing an inline hand-written ErrorBoundary if the app still has one. The platform screen is themed and reports non-404 route errors to the injector for 'Fix with AI'; an old inline boundary reports neither. The sync repoints the import if it is already there.",
+        "If the app calls loadMcpManifest, drop the `await` — it is synchronous now. The sync moved the import to ~stencil/mcp/app-manifest.",
+        "Keep app/mcp.ts, app/connections.ts, app/auth-hooks.server.ts and app/entry.client.tsx — the layer imports the first three directly and empty is their normal state. The sync restores a missing one.",
+        "Local dev only: an app created before this entry has no STENCIL_ENV in its wrangler.jsonc vars, so `bun run dev` throws on the missing BETTER_AUTH_SECRET instead of using the local default. Add \"STENCIL_ENV\": \"development\" to that vars block. Deploys are unaffected — the deployer strips the var, and absent already means not-dev."
+      ],
+      "renames": {
+        "~stencil/hydration": "~stencil/ui/hydration",
+        "~stencil/auth/context": "~stencil/ui/auth/context",
+        "~stencil/connections/context": "~stencil/ui/connections/context",
+        "~stencil/error-boundary": "~stencil/react-router/error-boundary",
+        "~stencil/worker/app": "~stencil/react-router/worker/app",
+        "~stencil/worker/entry.server": "~stencil/react-router/worker/entry.server",
+        "./.stencil/auth": "./.stencil/react-router/auth/routes",
+        "./.stencil/mcp": "./.stencil/react-router/mcp/routes",
+        "./.stencil/connections": "./.stencil/react-router/connections/routes",
+        "~stencil/strings": {
+          "Text": "~stencil/ui/strings",
+          "StringKey": "~stencil/ui/strings",
+          "withStrings": "~stencil/react-router/strings"
+        },
+        "~stencil/mcp": {
+          "stencilMcpRoutes": "~stencil/react-router/mcp/routes",
+          "loadMcpManifest": "~stencil/mcp/app-manifest"
+        },
+        "~stencil/connections/connect-button": "~stencil/ui/connections/connect-button",
+        "~stencil/auth/passthrough": "~stencil/react-router/auth/passthrough"
+      }
+    },
+    {
+      "hash": "49e11f322ece20276ed64bd9d8c65ba6f929c15a",
+      "date": "2026-09-10",
+      "notes": [
+        "Added vite/source-tagger.ts: a build-time Vite plugin that tags every JSX element with data-original-path=\"<project-relative file>\" so the preview can map a DOM node back to its source module. Enabled only when the platform sets STENCIL_SOURCE_TAGS=1 (draft/preview builds); production builds are untagged."
+      ],
+      "breaking": [
+        "If vite.config.ts does not already register the tagger, add it: import { sourceTagger } from \"./app/.stencil/vite/source-tagger\" and append sourceTagger({ enabled: process.env.STENCIL_SOURCE_TAGS === \"1\" }) to the plugins array. Nothing breaks without it — the preview just stays untagged."
+      ]
+    },
+    {
+      "hash": "7852c21d23f51459492c9fc6eeaed0525528c76c",
+      "date": "2026-09-10",
+      "notes": [
+        "data: new ~stencil/data module — server-side data SDK that verifies each table's access rule before running a query."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "08a9fb0921132627323493313db7a2ec85a92e1e",
+      "date": "2026-09-10",
+      "notes": [
+        "data: create() always stamps created_by with the caller when the table has that column, not only when the create rule names it."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "fd1ae5ce5fd1f626808de323b07166d989556bc6",
+      "date": "2026-09-10",
+      "notes": [
+        "data/tables: new types-only module deriving TableName, RowOf, WriteOf and Expanded from the generated EntityRegistry/EntityRefs in app/generated/db-schema.ts.",
+        "data/index: from() takes only a table the schema has and returns rows typed per column; expand keys are typed as the target table's row or null; create/update take a subset of the row's own columns. Requests and responses are unchanged."
+      ],
+      "breaking": [
+        "A screen that calls `db.from<SomeRow>(\"…\")` with an explicit type argument, or `from()` with a plain `string` variable, no longer compiles: drop the type argument (the row is typed from the schema) and pass the table slug as a literal, or narrow a dynamic name with `as TableName` from `~stencil/data`.",
+        "A hand-written row type or `as` cast on an SDK row is now redundant and may conflict: delete it and read the fields directly; `String(row.x)` still compiles and can be left or removed."
+      ]
+    },
+    {
+      "hash": "c85549f341033c7f109704c815c4cca6ab19bf82",
+      "date": "2026-09-15",
+      "notes": [
+        "react-router/auth/routes.ts: new bearer-gated internal route POST /api/auth/internal/grant-access, the platform→app entry point for granting an app-user account (create or reactivate, idempotent per address, runs the signup database hooks, works while public signups are closed). The grant emails a 30-day single-use welcome link that signs the person in; the response carries only { userId, outcome } — the token is never returned to the caller.",
+        "auth/grant.ts: platform-internal module backing that route. Not an app-facing export — app code has no grant function; the platform front door (the payments worker over the app-worker RPC binding) is the only caller."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "d81ef3cb67d2e6d6dac46295769c6cca1ed52a7e",
+      "date": "2026-09-15",
+      "notes": [
+        "payments/server.ts: new payFirstCheckout(context, { email, tierId, interval?, successUrl, cancelUrl }) — subscription checkout for a visitor with no account: pass the email collected on the page; on payment the platform creates or reactivates that address's account and emails a sign-in link, so the purchase itself is the signup. Honored only when the app's access mode is pay-first, and a builder-removed address is refused before checkout. checkout/requireSubscription/getSubscription are unchanged and still require the signed-in user."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "c32f34789413c9cb941f7e9f6429404ddb0597a4",
+      "date": "2026-09-15",
+      "notes": [
+        "auth/utils.ts: createAuth resolves closed signups from the request's x-stencil-signup header itself, so every instance honors the app's allowSignup setting; the disableSignup parameter is unchanged and forces it for callers with no request.",
+        "react-router/auth/api.auth.$.tsx: dropped the route's own header read — createAuth now resolves it."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "ab2130da68eeeb7e5a1d411567f47f1227f875d8",
+      "date": "2026-09-16",
+      "notes": [
+        "platform-paths.ts: new — the list of dispatcher-owned pages, shared by every framework adapter.",
+        "react-router/catch-all/route.tsx: new — splat route that redirects those pages and 404s for everything else.",
+        "react-router/auth/{login,signup}.tsx and passthrough.ts: removed — the catch-all covers them."
+      ],
+      "breaking": [
+        "Add `route(\"*\", \".stencil/react-router/catch-all/route.tsx\")` as the LAST entry in app/routes.ts.",
+        "If the app already has its own `route(\"*\", ...)`, leave that entry out — two splat routes is a build error. Call `passthroughIfDispatcherPage(request)` at the top of that route's loader instead, importing it from \"~stencil/react-router/catch-all/route\"."
+      ]
+    },
+    {
+      "hash": "f3b36ffe45e009b8a8343bcf127eabad20ceec58",
+      "date": "2026-09-16",
+      "notes": [
+        "auth/grant.ts: grantAccess takes an optional linkOrigin and builds the welcome link on it, falling back to the request origin.",
+        "react-router/auth/grant-access.tsx: the grant body accepts an optional linkOrigin."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "22459cc0b7af498510f7b0dcd5d2e542d26c2235",
+      "date": "2026-09-16",
+      "notes": [
+        "payments/server.ts: payFirstCheckout appends session_id={CHECKOUT_SESSION_ID} to the success URL for Stripe to fill in.",
+        "payments/server.ts: new claimPayFirstCheckout(context, sessionId) signs the buyer of a completed pay-first checkout straight in from the success route.",
+        "auth/grant.ts: grantAccess accepts signInLink to return a 10-minute single-use sign-in URL instead of emailing the welcome link.",
+        "react-router/auth/grant-access.tsx: the grant body accepts signInLink and the response then carries signInUrl."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "87cc941de66f4174828fa80df00d140af20ce96d",
+      "date": "2026-09-16",
+      "notes": [
+        "auth/grant.ts: grantAccess under signInLink also sends the welcome email; a new welcomeEmail flag (default true) suppresses it.",
+        "react-router/auth/grant-access.tsx: the grant body's signInLink and welcomeEmail are honoured only with the platform-internal x-stencil-internal header, which the dispatcher strips from public traffic.",
+        "payments/server.ts: a pay-first checkout stays claimable for 60 minutes (was 15); single use remains the protection."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "f598a75f618176aab05c74d7c7022a5e876a664a",
+      "date": "2026-09-17",
+      "notes": [
+        "ui/connections/connect-button.tsx: the unavailable-provider notice names the settings group App user connections now lives under (Build)."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "3d86208c3c6c7692e3d3323bc586c2aaf1da28d9",
+      "date": "2026-09-20",
+      "notes": [
+        "storage.ts: serveR2Object takes an optional transform (width, height, fit, format, quality) serving a stored image resized on the way out, edge-cached per URL; non-images, sources over 20 MB, failed transforms and Range requests serve unchanged.",
+        "storage.ts: new imageTransformFromRequest(request, env) reads that option set from a file route request query."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "bf8e79d91b975defcdefd78c6f9d5697d782d025",
+      "date": "2026-09-20",
+      "notes": [
+        "notifications.ts: new createNotifications(env) — the in-app notification store: send writes a fixed-shape row (title, body, link, read state) per recipient app user; list, unreadCount, markRead and markAllRead read and update it; the table is created on first use for apps provisioned before it.",
+        "react-router/notifications: new stencilNotificationRoutes route pack serving /api/notifications/* (list, read, read-all) scoped to the session app user.",
+        "ui/notifications/bell.tsx: new <NotificationsBell /> header component — unread badge, latest rows, mark all read on open, mark one read on click.",
+        "types/notifications.ts: new NotificationView.",
+        "auth/db-seed.sql: local-dev seed for the notification table."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "3e1d57411a566eb08e4b21e94777530c62a97999",
+      "date": "2026-09-20",
+      "notes": [
+        "payments/server.ts: checkout and payFirstCheckout accept an optional promoCode — one of the app's own discount codes — opening checkout with the discount already applied in place of the typed promo-code field."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "eb174dcb1e87ca022db32c00575aebbace9e49f3",
+      "date": "2026-09-20",
+      "notes": [
+        "env.d.ts: ambient CacheStorage augmentation adding readonly default: Cache, so the edge-cache helpers in storage.ts type-check under the DOM lib."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "690944f754b010cfd2186860aabb9247fe945571",
+      "date": "2026-09-21",
+      "notes": [
+        "react-router/auth/logout.tsx: sign-out moved from the GET loader to a POST action, so browser back/forward and link prefetch can no longer end a session; a GET now renders a confirm form when signed in and redirects to / when not.",
+        "ui/auth/sign-out-button.tsx: new <SignOutButton> — a POST form to /logout for offering sign out in an app."
+      ],
+      "breaking": [
+        "Replace every <Link to=\"/logout\"> and <a href=\"/logout\"> with <SignOutButton> from ~stencil/ui/auth/sign-out-button (or an equivalent <Form method=\"post\" action=\"/logout\">); a plain link now lands on a confirm page instead of signing out."
+      ]
+    },
+    {
+      "hash": "367a9c2e3a86c489c1f0537236730681e6e268cb",
+      "date": "2026-09-21",
+      "notes": [
+        "strings.ts: loadStringsFromStorage caches published strings in the isolate for 60 s (keyed by app id + slot), so a Published app open no longer reads R2 before rendering; the draft slot still reads storage on every request so live copy edits show immediately."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "9fc9feb7bdbbf3d1e80a987e070019cc50942afa",
+      "date": "2026-09-21",
+      "notes": [
+        "files.ts: new downloadResponse(url, filename, { hosts }) — fetches a file from another host server-side and streams it back as a same-origin attachment, refusing any URL outside the app's own known hosts."
+      ],
+      "breaking": [
+        "Nothing to change; for any file the app did not serve itself, prefer a route returning downloadResponse from ~stencil/files over an <a download> link to another origin."
+      ]
+    },
+    {
+      "hash": "8bf4e2bb6bdd55fe57ca8a6ae04eba9d708073cc",
+      "date": "2026-09-21",
+      "notes": [
+        "auth/utils.ts: Better Auth reads the client IP from cf-connecting-ip, so auth rate limiting is active instead of silently skipped."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "4ebf35173036460e631f4729ad770f703b02f737",
+      "date": "2026-09-23",
+      "notes": [
+        "ui/strings.tsx: getByPath falls back to a flat dotted key ({ \"hero.title\": \"…\" }) when the nested walk misses, so <Text> resolves both strings.json shapes."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "aa7ef726ab52270798bf3825e3a3f0e2e9246c26",
+      "date": "2026-09-23",
+      "notes": [
+        "tenant.ts: new module — getTenant/requireTenant/tenantUrl/tenantDomain resolve the app user whose subdomain a request arrived on, from the headers the dispatcher stamps.",
+        "auth/schema.ts: user.subdomain plus the released_subdomain table, created on demand for apps provisioned earlier.",
+        "ui/tenant/subdomain-field.tsx: new <SubdomainField /> — an app user claims their own address, checked as they type.",
+        "react-router/tenant/: withTenant for the root loader, and the stencilTenantRoutes pack behind the field.",
+        "react-router/root.tsx: useTenant() reads the tenant the root loader resolved.",
+        "auth/utils.ts: on a domain serving app-user subdomains the session cookie covers the whole domain, so one login works on every address under it."
+      ],
+      "breaking": [
+        "Nothing to change. To give app users their own addresses, spread stencilTenantRoutes into app/routes.ts, wrap the root loader in withTenant, and render <SubdomainField /> on a profile or onboarding screen — never hand-write the claim flow or read Host to work out which app user a request is for."
+      ]
+    },
+    {
+      "hash": "ada3203c72a98e406c73c99398905c871bd05aad",
+      "date": "2026-09-23",
+      "notes": [
+        "auth/bypass.tsx: the auth bypass only accepts a token for the seeded preview user; a token for any other app user is rejected."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "d86471904170e3dc8151e6f45a119abaae1cdb0b",
+      "date": "2026-09-24",
+      "notes": [
+        "auth/utils.ts: a user-create before hook runs ensureTenantSchema, so an app whose user table predates the subdomain column gains it before the first sign-up insert instead of failing with unable_to_create_user.",
+        "tenant.ts: ensureTenantSchema is exported."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "eef2286daf6865091704a871f6ea5aca3ba4d236",
+      "date": "2026-09-24",
+      "notes": [
+        "auth/browser.client.ts: signInWithGoogle({ callbackURL }) runs Google sign-in in a popup via /auth/done, so a custom sign-in page's Google button works inside the App preview frame, where Google refuses to render."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "0df3fed6ed06eac8772f7da6cb16e363d43b05a8",
+      "date": "2026-09-24",
+      "notes": [
+        "payments/selling.ts: sellerPanelLink takes an optional panelPath (a page inside the hosted seller dashboard) instead of callbackURL; the seller always lands on the dashboard, never back in the app."
+      ],
+      "breaking": [
+        "If a sellerPanelLink call passes { callbackURL }, remove that argument — call sellerPanelLink(request, context) with no options. Never pass the app's own URL; the dashboard is on its own origin."
+      ]
+    },
+    {
+      "hash": "0d91529bbfecfac56aff342e6a40215370d6f87e",
+      "date": "2026-09-24",
+      "notes": [
+        "payments/selling.ts: hasPurchased and getPurchases check every buyer identity present (the guest email ref and the signed-in user id) instead of the email alone, so a buyer who paid while signed in on a page that also passes buyerEmail is found.",
+        "payments/buyer-refs.ts: new pure module holding guestBuyerRef (re-exported unchanged from selling.ts) and buyerRefCandidates."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "fcf92e7147774a82edd38f1c3aca5a6945ac5e5e",
+      "date": "2026-09-27",
+      "notes": [
+        "payments/selling.ts: sellerCheckout documents that amountCents and sellerUserId must be read from the stored item inside the action, never from the request; the inline example loads the item by reference instead of hard-coding the amount."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "fff041247439d1bceacbb11e6d57a1a792360300",
+      "date": "2026-09-28",
+      "notes": [
+        "auth/server.ts: isPreviewUser(user, env) tells app code whether the session is the App preview's account; true only on the draft slot.",
+        "auth/server.ts: getSession returns null for the preview user off the draft slot, so the published app never honours its session.",
+        "auth/bypass.tsx: the preview auto-login is refused off the draft slot.",
+        "context.ts: isDraft(env) reads the IS_DRAFT deploy var (local dev counts as draft)."
+      ],
+      "breaking": [
+        "Nothing to change. An admin or owner gate that should open in the App preview checks isPreviewUser(user, env) from ~stencil/auth/server instead of seeding the preview user into the app's role data."
+      ]
+    },
+    {
+      "hash": "dc20c56215f120f6f528ce05f50910f054558255",
+      "date": "2026-09-28",
+      "notes": [
+        "auth/utils.ts: app users can change their own email — Better Auth changeEmail is enabled; a verified account approves the change from its current address before a confirmation link goes to the new one.",
+        "auth/utils.ts: the verification email sent to the new address says it confirms an email change rather than a new account.",
+        "auth/browser.client.ts: exports changeEmail beside signIn and signOut."
+      ],
+      "breaking": [
+        "Nothing to change. An account-settings form that lets an app user change their email calls changeEmail from ~stencil/auth/browser.client; the custom-auth skill has the shape and the role-keying caveat."
+      ]
+    },
+    {
+      "hash": "456d2c9ca2cd7056701c9f9e0ebd0411eba94004",
+      "date": "2026-09-29",
+      "notes": [
+        "auth/schema.ts: adds the two_factor table (per-app-user TOTP secret and backup codes) for Better Auth's twoFactor plugin; nothing reads or writes it yet.",
+        "auth/db-seed.sql: seeds the two_factor table and a two_factor_enabled flag column on user.",
+        "auth/ensure-tables.ts: ensureTwoFactorSchema adds the table and column to an app provisioned before they existed, once per isolate.",
+        "react-router/auth/api.auth.$.tsx: runs ensureTwoFactorSchema on every /api/auth request."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "cdbd59e28a26c7dbfe91eed646c13ade0d8b6ee5",
+      "date": "2026-09-29",
+      "notes": [
+        "auth/utils.ts: createAuth honours the app's \"Require email verification\" login setting from the request's x-stencil-verify-email: required header — Better Auth requireEmailVerification and sendOnSignIn are on for that request, so a password sign-up sends the verification email and creates no session, and an unverified password sign-in is refused with EMAIL_NOT_VERIFIED and re-sends the email. Off by default; the dispatcher stamps the header from AUTH_CONFIG.requireEmailVerification.",
+        "auth/utils.ts: opening a verification link signs the browser in (autoSignInAfterVerification) and lands on the link's callbackURL."
+      ],
+      "breaking": [
+        "Nothing to change. An app whose builder wants a verified-email gate turns on the Require email verification login setting (configureAuth requireEmailVerification: true); do not hand-build verification tables, verify screens or per-route emailVerified gates. An app-built login form should treat a 403 EMAIL_NOT_VERIFIED from signIn.email as \"check your inbox\" and offer sendVerificationEmail."
+      ]
+    },
+    {
+      "hash": "eb33f10a028f5ec6178c6d0b02a4df52034d0ce5",
+      "date": "2026-09-28",
+      "notes": [
+        "payments/selling.ts: createPlan, listPlans, updatePlan and archivePlan let a seller manage recurring plans; a rejected write returns { ok: false, code, error }."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "e3b07bdaedb102fbbfa666e25c8e08e020effbb4",
+      "date": "2026-09-29",
+      "notes": [
+        "payments/selling.ts: sellerSubscribe, hasActiveSubscription, getSubscription, getSubscriptions and manageSellerSubscription let a signed-in buyer subscribe to a seller plan, gate on it from the app database and manage it in Stripe's portal."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "64ada9baedf0f88618ba6faf6f3180bc9f7d9b20",
+      "date": "2026-09-29",
+      "notes": [
+        "tenant.ts: SUBDOMAIN_RE and checkSubdomain accept a 1–63 character word (any valid DNS label) instead of 3–63."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "f77ee75364dd873165e663fd2707d85a62d43ff4",
+      "date": "2026-09-29",
+      "notes": [
+        "auth/utils.ts: enables Better Auth's twoFactor plugin (TOTP + backup codes) and an after hook that challenges magic link and one-time code sign-ins for enrolled app users.",
+        "auth/two-factor.ts: the passwordless challenge hook, password-free enrolment (startTwoFactorEnrollment), and helpers the stock pages replay form posts with.",
+        "auth/qr.ts: a dependency-free QR encoder so the authenticator secret never leaves the app.",
+        "auth/schema.ts: declares user.two_factor_enabled, present fleet-wide since the schema sweep.",
+        "auth/browser.client.ts: twoFactorClient sends an app's own login form to the challenge page when sign-in asks for it.",
+        "react-router/auth: adds /auth/two-factor (challenge) and /auth/two-factor/setup (enrolment) to the auth route pack.",
+        "types/auth.ts: AuthUser gains twoFactorEnabled."
+      ],
+      "breaking": [
+        "Nothing to change. An account-settings page that offers two-factor authentication links to /auth/two-factor/setup; the custom-auth skill has the recipe."
+      ]
+    },
+    {
+      "hash": "f1789c415106da8c7899b10360d19a1dd33a58fd",
+      "date": "2026-09-29",
+      "notes": [
+        "tenant.ts: checkSubdomain reads the words the app builder blocked on the Domains card from the app's R2 bucket (__stencil/reserved-subdomains.json) instead of a request header; a missing or unreadable file falls back to the built-in list."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "a9f730da15f69b3aa805839a8c4fff017a648e90",
+      "date": "2026-09-30",
+      "notes": [
+        "auth/attribution.ts: new module that stashes first-touch UTM tags and the outside referrer in a cookie on landing and reads it back at sign-up.",
+        "auth/schema.ts, auth/db-seed.sql: the user table gains a nullable signup_attribution JSON column.",
+        "auth/utils.ts: signupAttribution is a non-input additional user field filled from the cookie in the user.create.before hook.",
+        "tenant.ts: ensureTenantSchema also adds signup_attribution to apps provisioned before it.",
+        "react-router/root.tsx: StencilRoot captures first-touch attribution on the first client render."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "445b14999b4070de012ca5bf01d9236c708719e8",
+      "date": "2026-10-01",
+      "notes": [
+        "react-router/catch-all/route.tsx: gained a default export (never rendered) so the splat is a page route and its thrown 404 reaches the root error screen instead of returning an empty response."
+      ],
+      "breaking": []
+    },
+    {
+      "hash": "3bb27d71c00080a6667aab1605f25aa6b252351e",
+      "date": "2026-10-01",
+      "notes": [
+        "image.ts: createImage().generate({ model }) now also accepts OpenAI image models (e.g. gpt-image-1) and Gemini image models (e.g. gemini-3.1-flash-image), which route to their providers instead of Workers AI. Default stays the cheaper @cf/black-forest-labs/flux-1-schnell; doc-only change (routing/metering live in the backend service)."
+      ],
+      "breaking": []
     }
   ]
 }

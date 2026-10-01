@@ -6,9 +6,9 @@ description: >
   and error (network/server failure). Use when a list, table, dashboard,
   or search surface might render with zero items, and to replace any
   generic "No data" placeholder.
+metadata:
+  agents: [builder]
 ---
-name: empty-states
-
 ## When to use
 
 Trigger this skill any time a UI surface can render with zero items:

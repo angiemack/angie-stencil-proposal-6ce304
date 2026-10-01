@@ -1,8 +1,9 @@
 ---
 name: runtime-image-generation
-description: Generating images AT RUNTIME from user input — an avatar maker, an "illustrate my note" button, an AI art tool, anywhere the running app must create an image on demand. Uses createImage from ~stencil/image (Cloudflare Workers AI, keyless, server-side). Load when the brief asks the app to generate images WHILE RUNNING in response to user input. NOT for static build-time assets (heroes, logos, backgrounds, textures) — those use dev-tools generate-image (the generate-image skill), not this.
+description: Generating images AT RUNTIME from user input — an avatar maker, an "illustrate my note" button, an AI art tool, anywhere the running app must create an image on demand. Uses createImage from ~stencil/image (Cloudflare Workers AI, keyless, server-side). Load when the brief asks the app to generate images WHILE RUNNING in response to user input. NOT for static build-time assets (heroes, logos, backgrounds, textures) — those use generateImage (the generate-image skill), not this.
+allowed-tools: createEntity
 metadata:
-  title: Runtime Image Generation
+  agents: [chat, builder]
 ---
 
 # Runtime image generation
@@ -14,7 +15,7 @@ time, proxied through the Stencil backend (Cloudflare Workers AI). No API keys.
 Use this **only** when the app must generate an image in response to user input
 while running (avatar generators, "illustrate this" buttons, AI art features). For
 static assets baked into the design at build time — hero images, logos,
-backgrounds, textures — use `dev-tools generate-image` instead (see the
+backgrounds, textures — use `generateImage` instead (see the
 `generate-image` skill). Don't wire this in unless the brief asks for runtime
 generation.
 
@@ -26,7 +27,10 @@ const { bytes, contentType } = await createImage(env).generate({ prompt, model }
 
 - `prompt` (required) — what to draw.
 - `model` (optional) — any Cloudflare Workers AI text-to-image model **id**.
-  Defaults to `@cf/black-forest-labs/flux-1-schnell`.
+  Defaults to `@cf/black-forest-labs/flux-1-schnell`. OpenAI's `gpt-image-1` and
+  Google's `gemini-3.1-flash-image` also work but cost significantly more per
+  image — only pass one if the app builder specifically asks for that provider;
+  otherwise stay on the default.
 
 Returns the image as a byte **stream** (`body`) plus the `contentType` the model
 produced — pipe it straight into R2, never buffered in the worker.
@@ -43,6 +47,12 @@ Cloudflare Workers AI models catalog for the full list):
 | `@cf/bytedance/stable-diffusion-xl-lightning` | Fastest; good for drafts/thumbnails. |
 
 Stick with the default unless the brief wants a specific look.
+
+OpenAI (`gpt-image-1`) and Google (`gemini-3.1-flash-image`) are also reachable
+through the same `model` param, but each costs significantly more per image than
+the Workers AI default — only pass one when the app builder asks for that
+provider by name. DALL·E is retired at OpenAI: an app builder who asks for
+"DALL·E" gets `gpt-image-1`.
 
 ## Store in R2, keep the key in D1
 
@@ -108,7 +118,7 @@ Then reference it as `/img/<key>` in an `<img>` (always with `alt`, `width`, `he
 - **Server-side only** — call it in a loader / action / scheduled handler. Never
   from the browser or a `useEffect`.
 - **Pipe the stream into R2, store only the key in D1** — never image bytes in D1.
-- Add an entity (via `dev-tools create-entity`) to hold the key + owner if the
+- Add an entity (via `createEntity`) to hold the key + owner if the
   generated images need to persist and list per user.
 - Generate on an explicit user action; a diffusion call takes a few seconds, so
   show a pending state and don't block a page's initial render on it.

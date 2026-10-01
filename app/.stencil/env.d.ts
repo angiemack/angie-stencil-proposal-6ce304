@@ -38,6 +38,13 @@ interface Window {
   };
 }
 
+// The workerd `caches.default` edge cache. lib.dom's `CacheStorage` wins the name
+// over the workerd class in worker-configuration.d.ts and has no `default`, so this
+// merges the member back in for the DOM-lib project that compiles worker code.
+interface CacheStorage {
+  readonly default: Cache;
+}
+
 interface Env {
   DB: D1Database;
   STORAGE: R2Bucket;
@@ -53,4 +60,7 @@ interface Env {
   // automatically at deploy; the scheduled route verifies inbound requests against it.
   SCHEDULE_TRIGGER_SECRET?: string;
   IS_DRAFT?: string;
+  // "development" only when running locally; the platform strips it at deploy,
+  // so a deployed app always leaves it unset.
+  STENCIL_ENV?: string;
 }

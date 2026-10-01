@@ -2,9 +2,9 @@
 name: calendar
 description: >
   Month-view calendar with events. Includes prev/next/today navigation, weekday header, day cells with up to 2 inline events + "more" indicator, hover tooltips, and a selected-day detail panel. Use when the brief asks for "calendar", "schedule", "month view", or "events".
+metadata:
+  agents: [builder]
 ---
-name: calendar
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

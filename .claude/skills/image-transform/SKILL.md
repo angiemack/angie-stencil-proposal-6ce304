@@ -1,8 +1,8 @@
 ---
 name: image-transform
-description: Resizing, cropping, compressing, rotating, or format-converting an existing image server-side — thumbnails, avatar crops, upload downscaling, WebP/AVIF conversion. Uses createImage(env).transform from ~stencil/image (Cloudflare Images binding, keyless, server-side). Load whenever the brief needs server-side image processing on uploaded or stored images. Do NOT reach for Sharp, jimp, or any native/npm image library — they can't run on Cloudflare Workers.
+description: Resizing, cropping, compressing, rotating, or format-converting an existing image server-side — thumbnails, avatar crops, downscaling before an AI vision call, WebP/AVIF conversion. Uses createImage(env).transform from ~stencil/image (Cloudflare Images binding, keyless, server-side). Load whenever the brief needs server-side image processing on uploaded or stored images — note that *displaying* a stored image at a different size needs no transform-and-store: the serving route resizes by URL (see the storage skill). For stamping a watermark/logo onto pictures (`transform`'s `watermark` option), load the `watermark` skill. Do NOT reach for Sharp, jimp, or any native/npm image library — they can't run on Cloudflare Workers.
 metadata:
-  title: Image Transform (resize / crop / convert)
+  agents: [chat, builder]
 ---
 
 # Image transform
@@ -34,7 +34,8 @@ const { body, contentType } = await createImage(env).transform(source, {
 ```
 
 - `source` (required) — the image bytes: an uploaded `File`/`Blob`, an `ArrayBuffer`,
-  or a `Uint8Array` (e.g. bytes read back from R2).
+  or a `Uint8Array` (e.g. bytes read back from R2). **Max 20 MB** — a larger source is
+  rejected with a 413, so cap the upload before calling (see below).
 - `width` / `height` — target size in pixels. Omit one to scale by the other.
 - `fit` — how the image fills the box: `scale-down` (default), `contain`, `pad`,
   `squeeze`, `cover`, `crop`.
@@ -47,15 +48,39 @@ Returns the transformed image as a byte **stream** (`body`) plus its `contentTyp
 pass `body` straight to `createStorage().put(key, body)`. The response is known-length,
 so R2 accepts the stream directly; no need to buffer it in the worker first.
 
-## Resize an upload, store the thumbnail in R2
+### The 20 MB source limit
 
-Keep image bytes in R2 and only the key in D1 (see the `storage` skill). A common
-pattern is to store the original and a downscaled variant:
+`transform` cannot read a source over 20 MB — photos straight off a modern camera or
+phone routinely exceed it. Check the size in the upload handler and tell the app user,
+rather than letting the transform fail:
+
+```ts
+const MAX_IMAGE_BYTES = 20_000_000; // 20 MB, decimal — not 20 MiB
+if (file.size > MAX_IMAGE_BYTES) {
+  return data({ error: "That image is over 20 MB — please upload a smaller file." }, { status: 400 });
+}
+```
+
+The same limit applies to the stored mark named by `watermark.key`, and the limit is on
+the source you send, not on the size you transform it down to. Store the original in R2
+unchanged if you need it; only the bytes handed to `transform` are capped.
+
+## Showing a stored image smaller or sharper? Don't store a copy — size the URL
+
+To display a stored image at a different size (thumbnails, list photos, sharp
+hero images), **do not** transform at upload time and store a second file. Store
+the original once; the serving route resizes on the way out when the URL asks
+for a size — `/api/files/<key>?width=400&height=400&fit=cover` — and the variant
+is cached at the edge. That works for every image already in storage, needs no
+naming convention linking two files, and never drifts out of sync with the
+original. The route wiring (`serveR2Object` + `imageTransformFromRequest`) and
+the accepted params are in the `storage` skill's serving section.
+
+Upload handlers store the file once, untouched:
 
 ```ts
 // app/routes/api.upload-photo.tsx  (register in app/routes.ts)
 import type { Route } from "./+types/api.upload-photo";
-import { createImage } from "~stencil/image";
 import { createStorage } from "~stencil/storage";
 import { requireAuth } from "~stencil/auth/server";
 
@@ -67,39 +92,46 @@ export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const file = form.get("photo") as File;
 
-  // Original, untouched.
-  const originalKey = `photos/${user.id}/${crypto.randomUUID()}`;
-  await storage.put(originalKey, file, { httpMetadata: { contentType: file.type } });
+  const key = `photos/${user.id}/${crypto.randomUUID()}`;
+  await storage.put(key, file, { httpMetadata: { contentType: file.type } });
 
-  // 400×400 WebP thumbnail — transform once, pipe the stream into R2.
-  const thumb = await createImage(env).transform(file, {
-    width: 400,
-    height: 400,
-    fit: "cover",
-    format: "image/webp",
-  });
-  const thumbKey = `${originalKey}-thumb`;
-  await storage.put(thumbKey, thumb.body, {
-    httpMetadata: { contentType: thumb.contentType },
-  });
-
-  return Response.json({ originalKey, thumbKey });
+  return Response.json({ key });
 }
 ```
 
-## Transform an image already in R2
+Reach for `transform` + `put` only when the transformed bytes are genuinely a
+different stored asset — a watermarked copy that must exist so the clean source
+is never served (see the `watermark` skill), or a permanent conversion of the
+stored file itself.
 
-`transform` takes bytes, so read the object first, then pass it through:
+## Downscale before an AI vision call
+
+A full-size photo wastes tokens and can exceed model input limits. When stored
+image bytes go to a vision model (or any classifier), `transform` them down
+first — this is the byte-in/byte-out case the serving route can't cover:
 
 ```ts
-const object = await storage.get(originalKey);
+const object = await storage.get(photoKey);
 if (!object) throw new Response("Not found", { status: 404 });
-const { body, contentType } = await createImage(env).transform(await object.arrayBuffer(), {
-  width: 1200,
-  format: "image/avif",
+const { body } = await createImage(env).transform(await object.arrayBuffer(), {
+  width: 1024,
+  fit: "scale-down",
+  format: "image/webp",
 });
-await storage.put(`${originalKey}-large`, body, { httpMetadata: { contentType } });
+const bytes = await new Response(body).arrayBuffer(); // hand these to the model
 ```
 
-Serve stored images through your own resource route (R2 keys are not public URLs) —
-see the `storage` skill's serving section.
+Nothing is stored: the downscaled bytes exist only for the call.
+
+## Watermarking
+
+`transform` composites a mark onto the picture when you pass the `watermark` option,
+naming a mark you have stored in R2 — the delivered bytes are already marked
+server-side, which a client-side overlay can never guarantee. The options and the
+serve-only-the-marked-copy pattern are in the `watermark` skill.
+
+## Previewing a PDF
+
+`transform` cannot read a PDF — Cloudflare Images only ingests image formats. To render a
+page of an uploaded PDF to an image (a document thumbnail, say), use `createImage(env).fromPdf`
+— see the `pdf-preview` skill.

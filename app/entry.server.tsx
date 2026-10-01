@@ -1,1 +1,1 @@
-export { default } from "~stencil/worker/entry.server";
+export { default } from "~stencil/react-router/worker/entry.server";

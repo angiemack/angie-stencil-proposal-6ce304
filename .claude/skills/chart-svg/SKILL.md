@@ -2,9 +2,9 @@
 name: chart-svg
 description: >
   Inline SVG charts — line, area, bar, donut, sparkline. No external chart libs. Pick the variant that matches the data shape (time-series → line/area, categorical → bar, share-of-total → donut, dense KPI inline → sparkline). All numerical labels render in DM Sans / mono with tabular figures, never italic.
+metadata:
+  agents: [builder]
 ---
-name: chart-svg
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

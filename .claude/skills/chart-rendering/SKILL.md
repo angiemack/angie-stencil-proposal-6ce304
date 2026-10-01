@@ -4,9 +4,9 @@ description: >
   Renders real chart markup for dashboards, analytics, reports, case studies,
   metrics, graphs, plots, visualizations, 数据看板, or 图表. Use before writing
   any chart-shaped UI.
+metadata:
+  agents: [builder]
 ---
-name: chart-rendering
-
 ## Chart Contract
 
 Every chart-shaped section must render real SVG, canvas, or React chart markup with numeric data. A title, labels, and a placeholder rectangle are not enough.

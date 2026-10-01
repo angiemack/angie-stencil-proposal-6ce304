@@ -1,0 +1,48 @@
+{
+  "migrations": [
+    {
+      "id": "typecheck-force",
+      "at": 1790887617538
+    },
+    {
+      "id": "remotion:4.0.522",
+      "at": 1790887617539
+    },
+    {
+      "id": "prerender-gate",
+      "at": 1790887617542
+    },
+    {
+      "id": "typescript-7",
+      "at": 1790887617544
+    },
+    {
+      "id": "wrangler-pin",
+      "at": 1790887617545
+    },
+    {
+      "id": "layer-config",
+      "at": 1790887617545
+    },
+    {
+      "id": "pointer-cursor",
+      "at": 1790887617546
+    },
+    {
+      "id": "remotion-route",
+      "at": 1790887618245
+    },
+    {
+      "id": "app-hook-files",
+      "at": 1790887618423
+    },
+    {
+      "id": "source-tagger",
+      "at": 1790887618585
+    },
+    {
+      "id": "source-tagger-tsconfig",
+      "at": 1790887618586
+    }
+  ]
+}

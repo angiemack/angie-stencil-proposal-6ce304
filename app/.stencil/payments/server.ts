@@ -1,10 +1,33 @@
-import { redirect } from "react-router";
+import { redirect } from "../http";
 import { requireAuth } from "~stencil/auth/server";
 import { createDb } from "~stencil/db";
 import { subscription } from "~stencil/auth/schema";
 import { tierOrder } from "~/generated/tiers";
-import { eq } from "drizzle-orm";
-import type { AppLoadContext } from "react-router";
+import { eq, sql } from "drizzle-orm";
+import type { AppContext } from "../types/context";
+
+/**
+ * Read the current user's subscription row. Apps provisioned before `cancel_at`
+ * shipped lack the column until the platform's first sync write heals it — add
+ * it here on demand so the read never depends on that write having happened.
+ */
+async function selectSubscription(
+  env: Env,
+  userId: string,
+): Promise<typeof subscription.$inferSelect | null> {
+  const db = createDb(env);
+  const query = () =>
+    db.select().from(subscription).where(eq(subscription.userId, userId)).limit(1);
+  try {
+    const [sub] = await query();
+    return sub ?? null;
+  } catch (err) {
+    if (!/no such column.*cancel_at/i.test(String(err))) throw err;
+    await db.run(sql`ALTER TABLE subscription ADD COLUMN cancel_at integer`);
+    const [sub] = await query();
+    return sub ?? null;
+  }
+}
 
 // A higher plan unlocks lower ones: `tierOrder` ranks plans low→high, so a member
 // qualifies at or above the gated plan. `exact`, or a plan absent from the order
@@ -118,7 +141,7 @@ async function fetchPaymentsEnabled(env: Env): Promise<boolean> {
  */
 export async function requireSubscription(
   request: Request,
-  context: AppLoadContext,
+  context: AppContext,
   tierId?: string,
   opts?: { exact?: boolean },
 ): Promise<{
@@ -127,14 +150,13 @@ export async function requireSubscription(
   paymentsEnabled: boolean;
 }> {
   const { user } = await requireAuth(request, context.cloudflare.env);
-  const db = createDb(context.cloudflare.env);
 
-  const [[sub], paymentsEnabled] = await Promise.all([
-    db.select().from(subscription).where(eq(subscription.userId, user.id)).limit(1),
+  const [sub, paymentsEnabled] = await Promise.all([
+    selectSubscription(context.cloudflare.env, user.id),
     fetchPaymentsEnabled(context.cloudflare.env),
   ]);
 
-  if (!paymentsEnabled) return { user, sub: sub ?? null, paymentsEnabled: false };
+  if (!paymentsEnabled) return { user, sub, paymentsEnabled: false };
 
   const isActive =
     sub &&
@@ -155,28 +177,37 @@ export async function requireSubscription(
  *
  *   const { sub, paymentsEnabled } = await getSubscription(request, context);
  *   return { isPro: !paymentsEnabled || sub?.status === "active" };
+ *
+ * `sub.cancelAt` is set while a cancellation is pending: the subscription stays
+ * `active` (and entitled) until that date, but will not renew — show
+ * "Cancelled — access until {cancelAt}" instead of a renewal date.
  */
 export async function getSubscription(
   request: Request,
-  context: AppLoadContext,
+  context: AppContext,
 ): Promise<{
   sub: typeof subscription.$inferSelect | null;
   paymentsEnabled: boolean;
 }> {
   const { user } = await requireAuth(request, context.cloudflare.env);
-  const db = createDb(context.cloudflare.env);
 
-  const [[sub], paymentsEnabled] = await Promise.all([
-    db.select().from(subscription).where(eq(subscription.userId, user.id)).limit(1),
+  const [sub, paymentsEnabled] = await Promise.all([
+    selectSubscription(context.cloudflare.env, user.id),
     fetchPaymentsEnabled(context.cloudflare.env),
   ]);
 
-  return { sub: sub ?? null, paymentsEnabled };
+  return { sub, paymentsEnabled };
 }
 
 /**
  * Start a checkout flow for the given tier. Throws a redirect to the hosted
  * checkout page — after payment the user is sent to successUrl.
+ *
+ * Pass `promoCode` (one of the app's own discount codes) to open checkout with
+ * that discount already applied — the reduced price shows with nothing to type,
+ * and the manual promo-code field is hidden (the payment page allows one or the
+ * other, never both). An unknown or removed code fails the checkout rather than
+ * silently charging full price, so only pass a code the app is promoting.
  *
  * Call in a form action:
  *
@@ -192,8 +223,14 @@ export async function getSubscription(
  */
 export async function checkout(
   request: Request,
-  context: AppLoadContext,
-  opts: { tierId: string; interval?: "month" | "year"; successUrl?: string; cancelUrl?: string },
+  context: AppContext,
+  opts: {
+    tierId: string;
+    interval?: "month" | "year";
+    successUrl?: string;
+    cancelUrl?: string;
+    promoCode?: string;
+  },
 ): Promise<void> {
   const env = context.cloudflare.env;
   const { user } = await requireAuth(request, env);
@@ -208,6 +245,7 @@ export async function checkout(
       // Omit interval when the caller didn't set one, so the worker bills the
       // interval the plan actually offers (a yearly-only plan has no monthly price).
       ...(opts.interval ? { interval: opts.interval } : {}),
+      ...(opts.promoCode ? { promoCode: opts.promoCode } : {}),
       endUserId: user.id,
       successUrl: opts.successUrl ?? `${base}/app`,
       cancelUrl: opts.cancelUrl ?? `${base}/upgrade`,
@@ -215,6 +253,116 @@ export async function checkout(
     },
     "Failed to start checkout",
   );
+}
+
+/**
+ * Start a pay-first checkout for a visitor with **no account**. Collect their
+ * email on the page (one field — not a signup form) and pass it here: Stripe
+ * locks its checkout email field to it, and on payment the platform creates
+ * (or reactivates) the account for that address — the purchase itself is the
+ * signup. Point successUrl at a route whose loader calls
+ * `claimPayFirstCheckout` with the `session_id` query param (appended here for
+ * Stripe to fill in) so the buyer lands signed in with no email hop; the
+ * platform's emailed sign-in link remains the recovery path for a closed tab.
+ * Only for an app whose access mode is pay-first (the platform refuses
+ * otherwise); anywhere a session exists, use `checkout`. An address whose
+ * account the app's builder removed is refused before any charge — the thrown
+ * error says so. `promoCode` pre-applies a discount exactly as on `checkout`.
+ *
+ * Call in a form action on a public page:
+ *
+ *   import { tier } from "~/generated/tiers";
+ *
+ *   export async function action({ request, context }: Route.ActionArgs) {
+ *     const form = await request.formData();
+ *     await payFirstCheckout(context, {
+ *       email: String(form.get("email") ?? ""),
+ *       tierId: tier!.id,
+ *       successUrl: new URL("/subscribe/success", request.url).toString(),
+ *       cancelUrl: new URL("/", request.url).toString(),
+ *     });
+ *   }
+ */
+export async function payFirstCheckout(
+  context: AppContext,
+  opts: {
+    email: string;
+    tierId: string;
+    interval?: "month" | "year";
+    successUrl: string;
+    cancelUrl: string;
+    promoCode?: string;
+  },
+): Promise<void> {
+  const env = context.cloudflare.env;
+  const appId = await resolveAppId(env);
+
+  // Appended by hand: Stripe only substitutes the literal `{CHECKOUT_SESSION_ID}`
+  // placeholder, and URL/searchParams helpers would percent-encode the braces.
+  const successUrl =
+    opts.successUrl +
+    (opts.successUrl.includes("?") ? "&" : "?") +
+    "session_id={CHECKOUT_SESSION_ID}";
+
+  await paymentsRedirect(
+    env,
+    `/v1/apps/${appId}/subscriptions/checkout`,
+    {
+      customerEmail: opts.email,
+      tierId: opts.tierId,
+      ...(opts.interval ? { interval: opts.interval } : {}),
+      ...(opts.promoCode ? { promoCode: opts.promoCode } : {}),
+      payFirst: true,
+      successUrl,
+      cancelUrl: opts.cancelUrl,
+    },
+    "Failed to start checkout",
+  );
+}
+
+/**
+ * Sign in the buyer who just completed a pay-first checkout, in the browser
+ * Stripe redirected back. Pass the `session_id` query param from the success
+ * URL; returns a short-lived single-use sign-in URL to redirect the browser to
+ * (magic-link verify → session cookie → `/app`), or null when the claim is
+ * refused — already used, expired, or the payment didn't complete. On null,
+ * render a fallback: the platform's emailed sign-in link covers a closed tab
+ * or another device.
+ *
+ *   export async function loader({ request, context }: Route.LoaderArgs) {
+ *     const sessionId = new URL(request.url).searchParams.get("session_id");
+ *     if (sessionId) {
+ *       const url = await claimPayFirstCheckout(context, sessionId);
+ *       if (url) throw redirect(url);
+ *     }
+ *     return {};
+ *   }
+ */
+export async function claimPayFirstCheckout(
+  context: AppContext,
+  sessionId: string,
+): Promise<string | null> {
+  const env = context.cloudflare.env;
+  try {
+    const appId = await resolveAppId(env);
+    const res = await paymentsFetch(env, `/v1/apps/${appId}/subscriptions/claim`, {
+      method: "POST",
+      body: JSON.stringify({ sessionId }),
+    });
+    if (!res.ok) {
+      // A refusal (reused/expired session) is an expected path the success page
+      // handles; log it so a systemic failure is still visible.
+      console.warn(`Pay-first claim refused (${res.status})`);
+      return null;
+    }
+    const { url } = await res.json<{ url?: string }>();
+    return url || null;
+  } catch (err) {
+    // Never crash the success page over the claim — the buyer's recovery is the
+    // emailed sign-in link, which the fallback screen points at.
+    console.warn(`Pay-first claim failed: ${String(err)}`);
+    return null;
+  }
 }
 
 /**
@@ -230,7 +378,7 @@ export async function checkout(
  */
 export async function manageSubscription(
   request: Request,
-  context: AppLoadContext,
+  context: AppContext,
   returnUrl?: string,
 ): Promise<void> {
   const env = context.cloudflare.env;

@@ -5,10 +5,9 @@ description: >
   badge, and full-width sparkline. Use for dashboard summary rows, financial KPI
   strips, and analytics overview panels. Enforces tabular figures, semantic trend
   colors, and serif numerals.
+metadata:
+  agents: [builder]
 ---
-
-name: metric-card
-
 Reference implementation — copy and adapt, do not reinvent.
 
 ## Hard rules

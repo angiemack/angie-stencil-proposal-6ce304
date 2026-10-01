@@ -131,14 +131,22 @@ const html = `<!DOCTYPE html>
 </html>`;
 
 import type { Route } from "./+types/home";
-import { requireAuth } from "~stencil/auth/server";
+import { redirect } from "react-router";
+import { ROBOTS, isUnlocked } from "~/lib/gate.server";
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  // Gate the letter behind auth — unauthenticated visitors are redirected
-  // to /login before any content is served.
-  await requireAuth(request, context.cloudflare.env);
+export async function loader({ request }: Route.LoaderArgs) {
+  // Shared-password gate: check the unlock cookie BEFORE reading or rendering
+  // any letter content. A missing/invalid cookie redirects to /gate with an
+  // empty body — no words of the letter are sent to a visitor who hasn't
+  // entered the password.
+  if (!isUnlocked(request)) {
+    return redirect("/gate", { headers: { "x-robots-tag": ROBOTS } });
+  }
 
   return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "x-robots-tag": ROBOTS,
+    },
   });
 }

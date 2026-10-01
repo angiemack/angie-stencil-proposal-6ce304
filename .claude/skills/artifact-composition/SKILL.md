@@ -4,9 +4,9 @@ description: >
   Classifies design artifacts and sets the right density, section ladder,
   metrics treatment, and comparison structure. Use for landing pages, case
   studies, dashboards, pricing pages, reports, one-pagers, emails, or slides.
+metadata:
+  agents: [builder]
 ---
-name: artifact-composition
-
 ## Artifact Type
 
 Before visual styling, classify the artifact by its primary job and choose the

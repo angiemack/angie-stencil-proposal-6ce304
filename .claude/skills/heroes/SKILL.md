@@ -2,9 +2,9 @@
 name: heroes
 description: >
   Marketing landing-page hero sections. Five variants: centered CTA with badge, left-aligned with image slot, split-screen, video / animated background, and minimal serif typography. Pick the variant that matches the brand voice; copy its function into your file and override the `tokens` prop to recolor.
+metadata:
+  agents: [builder]
 ---
-name: heroes
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

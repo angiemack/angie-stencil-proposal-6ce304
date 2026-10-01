@@ -2,9 +2,9 @@
 name: glassmorphism
 description: >
   Glassmorphism / liquid-glass surfaces (iOS 26 / visionOS feel). Three variants: now-playing card, settings panel with toggle rows, and notification stack. Pair with a vivid gradient background — the blur is what sells it. Use sparingly; glass on flat backgrounds looks muddy.
+metadata:
+  agents: [builder]
 ---
-name: glassmorphism
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

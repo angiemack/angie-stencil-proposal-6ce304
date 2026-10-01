@@ -5,9 +5,9 @@ description: >
   design quality. Use when building any UI component, landing page, dashboard,
   prototype, or when styling HTML/CSS. Avoids generic AI aesthetics (Inter font,
   purple gradients, predictable card layouts).
+metadata:
+  agents: [builder]
 ---
-name: frontend-design-anti-slop
-
 ## Frontend Design Quality Guard
 
 You tend to produce "AI slop" by default: Inter or system fonts, purple-on-white gradients, symmetric card grids, flat white backgrounds. Break this pattern deliberately.
@@ -15,7 +15,7 @@ You tend to produce "AI slop" by default: Inter or system fonts, purple-on-white
 ### Typography
 Choose unexpected, characterful typefaces. Pair a distinctive display font (e.g. Playfair Display, DM Serif Display, Syne, Bebas Neue, Instrument Serif) with a refined body font. Never use Inter, Roboto, Arial, or Space Grotesk — they signal zero creative investment.
 
-Adjacent heading levels must be visually distinct: step weight down (h1 bold → h2 semibold → h3 medium) and pair with a color step (foreground → muted-foreground). Never same size and weight for two consecutive levels.
+Adjacent heading levels must be visually distinct: step weight down (h1 bold → h2 semibold → h3 medium) and pair with a color step (foreground → muted-foreground). Never same size and weight for two consecutive levels. Apps with a display font take their heading weight from the theme token (`--font-weight-display`) — step size and colour between levels; do not hardcode a weight per heading.
 
 Never positive letter-spacing on lowercase headings or body text — only all-caps labels and badges get widened tracking. Never font-weight 300 for body text. Never apply the display/headline font below 18px.
 

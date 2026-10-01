@@ -1,8 +1,9 @@
 ---
 name: data-safe-saves
 description: Save/update semantics that prevent silent data loss. Apply whenever building or modifying ANY save, update, or edit flow — form submits, editor sheets/modals, settings pages, CRUD actions, admin panels — that writes to existing database rows, and whenever one record references another. Covers partial updates, explicit-removal flags, upserting child collections by id, and linking by stable id instead of name/title.
+allowed-tools: queryRecords
 metadata:
-  title: Data-Safe Save Semantics
+  agents: [builder]
 ---
 
 # Data-Safe Save Semantics

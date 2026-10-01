@@ -8,6 +8,8 @@ export function createBackendFetch(env: Env) {
     if (env.BACKEND_SERVICE_API_KEY) {
       headers.set("Authorization", `Bearer ${env.BACKEND_SERVICE_API_KEY}`);
     }
+
+    headers.set("x-stencil-preview", env.IS_DRAFT === "true" ? "true" : "false");
     const req = new Request(input, { ...init, headers });
     return env.BACKEND_SERVICE ? env.BACKEND_SERVICE.fetch(req) : fetch(req);
   };

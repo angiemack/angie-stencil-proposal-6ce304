@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { redirect } from "../http";
 import { createConnections, type ConnectionStatus } from "./index";
 
 /**

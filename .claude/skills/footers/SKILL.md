@@ -2,9 +2,9 @@
 name: footers
 description: >
   Site / app footer sections. Four variants: mega 5-column with brand + social, ultra-minimal one-line, dense 6-column link grid, and brand block + newsletter signup. Pick the variant that matches the page weight (mega for marketing, minimal for app).
+metadata:
+  agents: [builder]
 ---
-name: footers
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

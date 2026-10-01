@@ -1,4 +1,4 @@
-import { route, type RouteConfigEntry } from "@react-router/dev/routes";
+import type { ConnectionStatus } from "../types/connections";
 import { BACKEND_BASE, createBackendFetch } from "../backend";
 
 /**
@@ -12,7 +12,8 @@ import { BACKEND_BASE, createBackendFetch } from "../backend";
  * Two things go together and must be added in the same change:
  *
  *   1. `app/connections.ts`, the manifest naming which providers you use
- *   2. `...stencilConnectionRoutes` in `app/routes.ts`
+ *   2. `...stencilConnectionRoutes` in `app/routes.ts` (exported from
+ *      `./.stencil/react-router/connections/routes`)
  *
  * A manifest with no registered route pack is a broken app: `requireConnection`
  * redirects members to `/app/connections`, and without the pack that is a 404.
@@ -35,36 +36,7 @@ export interface ConnectionManifestEntry {
 
 export type ConnectionManifest = ConnectionManifestEntry[];
 
-/**
- * The Stencil connections route pack: `/app/connections`.
- *
- * Spread into your routes config, with a RELATIVE path. React Router's config
- * loader runs before tsconfig aliases resolve, so `~stencil/connections` does
- * not work in `routes.ts` even though it works everywhere else:
- *
- *   import { stencilConnectionRoutes } from "./.stencil/connections";
- *
- *   export default [
- *     index("routes/home.tsx"),
- *     ...stencilConnectionRoutes,
- *   ] satisfies RouteConfig;
- */
-export const stencilConnectionRoutes: RouteConfigEntry[] = [
-  route("app/connections", ".stencil/connections/routes.tsx"),
-  route("api/connections/*", ".stencil/connections/api.$.tsx"),
-];
-
-/** What a member's connection to one provider currently is. */
-export type ConnectionStatus =
-  | "connected"
-  | "needs_reauth"
-  | "not_connected"
-  /**
-   * The manifest names this provider but the app owner has not finished setting
-   * it up. An ordinary state, not an error: the app renders it greyed out and
-   * carries on.
-   */
-  | "unavailable";
+export type { ConnectionStatus } from "../types/connections";
 
 /** A member's connection, with no credentials in it. Never any. */
 export interface ConnectionSummary {
@@ -108,6 +80,24 @@ export interface ProxyRequest {
   path: string;
   headers?: Record<string, string>;
   body?: unknown;
+  /**
+   * Which identity to act as, for a provider whose one authorization returns
+   * several. Omit for the default, which is what nearly every provider has.
+   *
+   * Slack is the case this exists for: one connection, two identities.
+   *
+   *   member.request("slack", { path: "/chat.postMessage", ... })
+   *     posts as the APP -- its bot name and avatar
+   *
+   *   member.request("slack", { path: "/chat.postMessage", as: "member", ... })
+   *     posts as the MEMBER -- their own name and avatar
+   *
+   * A name the connector does not declare, or one the member did not grant,
+   * fails with `identity_not_granted` and a message listing what is available.
+   * It never silently falls back to the default: posting as the wrong identity
+   * is the failure this whole mechanism exists to make impossible.
+   */
+  as?: string;
 }
 
 export interface ProxyResponse {

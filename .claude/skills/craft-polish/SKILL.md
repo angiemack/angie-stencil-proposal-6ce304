@@ -4,9 +4,9 @@ description: >
   Adds the final interaction and craft surplus pass that prevents generic AI UI:
   real clickable states, view transitions, empty states, rhythm breaks, and
   component-reference self-checks. Use before final `done`.
+metadata:
+  agents: [builder]
 ---
-name: craft-polish
-
 ## Interactive Minimum
 
 Before `done`, run a final craft pass. For app/tool surfaces, every clickable element must do something: change state, open a modal/drawer, switch a tab, reveal content, copy, dismiss, or show a toast. Pure hover does not count. For static one-pagers, only visible controls need behavior; decorative links can be styled as inert only when they are clearly not the point of the artifact.

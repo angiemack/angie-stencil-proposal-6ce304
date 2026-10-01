@@ -10,7 +10,7 @@
   "compatibility_flags": ["nodejs_compat", "no_minimal_subrequests"],
   
   // Local-dev bindings - Stencil injects real values during deployment
-  "vars": { "APP_SLUG": "local-app", "APP_ID": "local-app" },
+  "vars": { "APP_SLUG": "local-app", "APP_ID": "local-app", "STENCIL_ENV": "development" },
   "d1_databases": [
     {
       "binding": "DB",

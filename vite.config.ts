@@ -3,6 +3,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { sourceTagger } from "./app/.stencil/vite/source-tagger";
 
 export default defineConfig({
   build: {
@@ -30,6 +31,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    sourceTagger({ enabled: process.env.STENCIL_SOURCE_TAGS === "1" }),
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tailwindcss(),
     reactRouter(),

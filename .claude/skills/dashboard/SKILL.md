@@ -1,9 +1,21 @@
 ---
 name: dashboard
 description: >
-  Internal data dashboards / admin consoles. Three variants: dark ops console with KPI strip + sparkline grid, light analytics with chart hero + breakdown tiles, and finance-style ledger with bold currency KPIs. Numbers always render in DM Sans bold or JetBrains Mono with tabular figures — never italic serif.
+  Internal data dashboards / admin consoles — a composition of the `metric-card` skill (KPI strip) and the `general-card` skill (content panels); load both alongside this one. Three layout variants: dark ops console with KPI strip + sparkline grid, light analytics with chart hero + breakdown tiles, and finance-style ledger with bold currency KPIs. Numbers always render in DM Sans bold or JetBrains Mono with tabular figures — never italic serif.
+metadata:
+  agents: [builder]
 ---
-name: dashboard
+## Hard rules
+
+A dashboard is a **composition**, not a surface of its own: a `metric-card` strip for the KPIs on top, and `general-card` panels for everything else — lists, activity, upcoming events, breakdowns, content. Load BOTH skills with the Skill tool before you write a dashboard and follow their hard rules; this skill only decides the layout. In short:
+
+- Section heading lives **outside** the card, in the display face (`SectionHeading` from `general-card`). Never a title inside the card with a `border-b`.
+- Card = **border only**. No `shadow-*` on any panel.
+- KPI cards render as **one connected strip** (`gap-px bg-border` container from `metric-card`), never as individual floating cards, and **no icon or emblem in the KPI label row** — text only.
+- Lists inside panels use the `CardRow` / `ActivityRow` / `EventRow` primitives from `general-card`; do not hand-roll rows.
+- Never put a `MetricCard` inside a `GeneralCard` body.
+
+The mock-ups below are layout and mood references only — their inline hex colours, fixed radii and inline styles are not the spec. Colours, radii and shadows come from the theme tokens in `theme.css` and from the two card skills.
 
 Reference implementation — read before writing this UI surface.
 

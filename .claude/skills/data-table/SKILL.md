@@ -2,9 +2,9 @@
 name: data-table
 description: >
   Admin / dashboard data table. Sortable columns, filter input, row selection with bulk actions, pagination, status badges, and inline usage bars. Use when the brief asks for "users table", "admin panel", "data grid", or "list view".
+metadata:
+  agents: [builder]
 ---
-name: data-table
-
 Reference implementation — read before writing this UI surface.
 
 ```jsx

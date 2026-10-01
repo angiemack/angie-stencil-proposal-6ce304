@@ -1,6 +1,8 @@
 import { getCookies } from "better-auth/cookies";
 import { makeSignature } from "better-auth/crypto";
+import { isDraft } from "../context";
 import { createAuth, verifyJwt } from "./utils";
+import { PREVIEW_USER_EMAIL, safeReturnTo } from "./server";
 
 export async function handleBypass(
   request: Request,
@@ -15,6 +17,8 @@ export async function handleBypass(
     302,
   );
   try {
+    // The preview user only ever signs in on the draft slot.
+    if (!isDraft(env)) return fallback;
     const token = url.searchParams.get("token");
     if (!token) return fallback;
 
@@ -22,6 +26,11 @@ export async function handleBypass(
     if (!payload?.sub) return fallback;
 
     const ctx = await auth.$context;
+    // Only the seeded preview user may enter here: the preview flow is the sole
+    // legitimate signer, so a token for any other app user is rejected.
+    const user = await ctx.internalAdapter.findUserById(payload.sub);
+    if (user?.email !== PREVIEW_USER_EMAIL) return fallback;
+
     const session = await ctx.internalAdapter.createSession(payload.sub);
     const signedToken = `${session.token}.${await makeSignature(session.token, ctx.secret)}`;
 
@@ -38,9 +47,7 @@ export async function handleBypass(
       .filter(Boolean)
       .join("; ");
 
-    // Honour a caller-supplied returnTo (must be a relative path to prevent open redirect).
-    const returnTo = url.searchParams.get("returnTo");
-    const dest = returnTo?.startsWith("/") ? returnTo : "/app";
+    const dest = safeReturnTo(url.searchParams.get("returnTo"));
 
     return new Response(null, {
       status: 302,

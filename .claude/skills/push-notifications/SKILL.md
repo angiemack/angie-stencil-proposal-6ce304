@@ -1,6 +1,9 @@
 ---
 name: push-notifications
 description: Web Push in a Stencil app — end-user opt-in, server-side sending, and delivery control (ttl, urgency, tag). Load for push notifications, reminders, alerts, "notify me", mobile/PWA notifications, or when a notification arrives late/never. The platform injects the service worker, manifest, and VAPID key; never hand-roll them.
+allowed-tools: previewUser enablePwa
+metadata:
+  agents: [chat, builder]
 ---
 
 # Push notifications
@@ -8,6 +11,11 @@ description: Web Push in a Stencil app — end-user opt-in, server-side sending,
 The platform provides the transport (service worker, manifest, VAPID key, and the
 `window.stencil.push` client API). You write only a client opt-in button and a
 server-side `send()`.
+
+Push is fire-and-forget: it pokes a device and keeps no history. For anything an
+app user should be able to open and read later — a bell, inbox, unread count —
+use the notification store (`~stencil/notifications`, `in-app-notifications`
+skill), usually alongside the push.
 
 ## Requirements
 
@@ -99,7 +107,8 @@ short `ttl` with a `tag` so at most one current copy exists.
   can see without checking. Log it.
 - `delivered` counts push-service ACKs, not displays. The platform tracks real
   clicks separately (the service worker reports them); don't try to build your own
-  read receipts.
+  read receipts. If the app needs a real per-app-user read state, that is the
+  notification store's job (`in-app-notifications` skill) — send a row there too.
 
 ```ts
 const res = await createPush(env).send({ toUserIds: ids, title, body, tag: "reminder" });
@@ -126,7 +135,7 @@ Rules:
 
 - Any row you seed on the user's behalf during a build must be scoped to the real
   owner, not the preview user — otherwise the app's own notifications never reach
-  them (get the preview id from `dev-tools preview-user` and don't reuse it as an
+  them (get the preview id from your instructions, or from `previewUser` and don't reuse it as an
   audience).
 - Derive audiences from the **auth user table** where possible, and treat data
   ownership as a filter on top of it, so a user with no rows yet is still reachable.

@@ -5,9 +5,9 @@ description: >
   interactions. Use when building a mobile app screen, responsive mobile
   layout, or any prototype intended to be viewed on a phone (375px viewport).
   Enforces 44pt touch targets, proper status bar height, and safe area insets.
+metadata:
+  agents: [builder]
 ---
-name: mobile-mock
-
 ## Mobile Mock Design Standards
 
 ### Viewport and Frame

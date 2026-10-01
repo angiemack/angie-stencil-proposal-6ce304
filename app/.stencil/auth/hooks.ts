@@ -1,4 +1,5 @@
 import type { BetterAuthOptions } from "better-auth";
+import appHooks from "~/auth-hooks.server";
 
 /** Better Auth's native database-hook map: user/session/account/verification,
  *  each with create/update and before/after. */
@@ -9,18 +10,16 @@ export type DatabaseHooks = NonNullable<BetterAuthOptions["databaseHooks"]>;
  *  to call out with a stored key; a plain object works when `env` is unused. */
 export type AuthHooks = DatabaseHooks | ((env: Env) => DatabaseHooks);
 
-const appHookModules = import.meta.glob<{ default?: AuthHooks }>(
-  "../../auth-hooks.server.ts",
-  { eager: true },
-);
-
-/** The app's optional hooks, factory resolved against `env`; undefined when the
- *  app ships no `auth-hooks.server.ts` (Vite resolves the glob to nothing). */
+/** The app's optional hooks, factory resolved against `env`.
+ *
+ *  A plain static import: `app/auth-hooks.server.ts` always exists (the template
+ *  ships it exporting `{}`), so an app that reacts to nothing costs nothing here.
+ *  It cannot be a dynamic import — Rollup fails the build on a specifier it
+ *  cannot resolve rather than deferring to runtime, which is why this used to
+ *  need `import.meta.glob`. Shipping the file removes the need for either. */
 function loadAppHooks(env: Env): DatabaseHooks | undefined {
-  for (const mod of Object.values(appHookModules)) {
-    if (mod.default) return typeof mod.default === "function" ? mod.default(env) : mod.default;
-  }
-  return undefined;
+  if (!appHooks) return undefined;
+  return typeof appHooks === "function" ? appHooks(env) : appHooks;
 }
 
 type Hook = (data: unknown, ctx: unknown) => unknown;
